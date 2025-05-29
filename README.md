@@ -5,12 +5,8 @@ A local desktop application for managing Aitomics projects with a block-based co
 ## Features
 
 - Create and manage Aitomics projects
-- Block-based code editor with support for:
-  - Code blocks (Python)
-  - Text blocks
-  - Data blocks
+- Block-based code editor with support for implementing yourself (JS) via Aitomics.
 - Drag-and-drop interface for arranging blocks
-- Dark mode UI
 - Local storage for projects
 
 ## Development Setup
@@ -47,12 +43,3 @@ A local desktop application for managing Aitomics projects with a block-based co
   - `src/components/` - React components
   - `src/types/` - TypeScript type definitions
   - `src/preload.ts` - Electron preload script
-
-## Technologies Used
-
-- Electron
-- React
-- TypeScript
-- Material-UI
-- Monaco Editor
-- ReactFlow
