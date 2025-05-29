@@ -6,7 +6,7 @@ export type BlockType = 'import' | 'export' | 'transform' | 'comparison';
 export type ActionType = 'input' | 'output' | 'transform' | 'comparison';
 
 export interface ActionConfig {
-  type: 'text' | 'number' | 'boolean' | 'select' | 'json';
+  type: 'text' | 'number' | 'boolean' | 'select' | 'json' | 'list';
   label: string;
   required: boolean;
   defaultValue?: any;
@@ -24,6 +24,7 @@ export interface Action {
   config: ActionConfig[];
   isBuiltIn?: boolean;
   description: string;
+  wrapInAitomics?: boolean;
 }
 
 export interface Block {
@@ -34,6 +35,9 @@ export interface Block {
   position: { x: number; y: number };
   actionId?: string; // Reference to the action being used
   config?: Record<string, any>; // Configuration values for the action
+  file?: string; // Name of the selected file for import nodes
+  outputPath?: string; // Output folder path for export nodes
+  outputFilename?: string; // Output filename for export nodes
 }
 
 export type Edge = ReactFlowEdge;

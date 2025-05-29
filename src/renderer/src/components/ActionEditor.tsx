@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   Box,
   Button,
@@ -16,6 +16,8 @@ import {
   Radio,
   RadioGroup,
   Paper,
+  Tooltip,
+  Link,
 } from '@mui/material';
 import Editor, { loader } from '@monaco-editor/react';
 import { Action, ActionConfig, ActionType } from '../types/Project';
@@ -51,7 +53,9 @@ import SortIcon from '@mui/icons-material/Sort';
 import SearchIcon from '@mui/icons-material/Search';
 import FindInPageIcon from '@mui/icons-material/FindInPage';
 import FindReplaceIcon from '@mui/icons-material/FindReplace';
+import InfoIcon from '@mui/icons-material/Info';
 import { builtInActions } from '../actions/builtInActions';
+import debounce from 'lodash/debounce';
 
 const AVAILABLE_ICONS = [
   'Code', 'DataObject', 'Storage', 'CloudUpload', 'CloudDownload',
@@ -107,6 +111,42 @@ loader.init().then(monaco => {
       'editorIndentGuide.activeBackground': '#E8E4D9',
     }
   });
+
+  // Configure TypeScript defaults
+  monaco.languages.typescript.typescriptDefaults.setDiagnosticsOptions({
+    noSemanticValidation: false,
+    noSyntaxValidation: false,
+  });
+
+  monaco.languages.typescript.typescriptDefaults.setCompilerOptions({
+    target: monaco.languages.typescript.ScriptTarget.ES2020,
+    allowNonTsExtensions: true,
+    moduleResolution: monaco.languages.typescript.ModuleResolutionKind.NodeJs,
+    module: monaco.languages.typescript.ModuleKind.CommonJS,
+    noEmit: true,
+    esModuleInterop: true,
+    jsx: monaco.languages.typescript.JsxEmit.React,
+    reactNamespace: "React",
+    allowJs: true,
+    typeRoots: ["node_modules/@types"],
+    strict: true,
+    noImplicitAny: false,
+    strictNullChecks: true,
+    strictFunctionTypes: true,
+    strictBindCallApply: true,
+    strictPropertyInitialization: true,
+    noImplicitThis: true,
+    alwaysStrict: true,
+    noUnusedLocals: true,
+    noUnusedParameters: true,
+    noImplicitReturns: true,
+    noFallthroughCasesInSwitch: true,
+    allowSyntheticDefaultImports: true,
+    experimentalDecorators: true,
+    emitDecoratorMetadata: true,
+    skipLibCheck: true,
+    forceConsistentCasingInFileNames: true
+  });
 });
 
 const ActionEditor: React.FC<ActionEditorProps> = ({
@@ -119,9 +159,111 @@ const ActionEditor: React.FC<ActionEditorProps> = ({
   const [type, setType] = useState<ActionType>(action?.type || 'input');
   const [icon, setIcon] = useState(action?.icon || 'CodeIcon');
   const [color, setColor] = useState(action?.isBuiltIn ? '#666666' : (action?.color || '#10a37f'));
-  const [code, setCode] = useState(action?.code || `function process(input: Input, config: Config): any {\n  return input;\n}`);
+  const [wrapInAitomics, setWrapInAitomics] = useState(action?.wrapInAitomics ?? true);
+  const [code, setCode] = useState(action?.code || '');
   const [configs, setConfigs] = useState<ActionConfig[]>(action?.config || []);
   const [description, setDescription] = useState(action?.description || '');
+  const [editorModel, setEditorModel] = useState<any>(null);
+  const [editorInstance, setEditorInstance] = useState<any>(null);
+  const isInitialLoad = React.useRef(true);
+
+  // Add debounced update functions
+  const debouncedUpdateName = useCallback(
+    debounce((value: string) => {
+      setName(value);
+    }, 500),
+    []
+  );
+
+  const debouncedUpdateDescription = useCallback(
+    debounce((value: string) => {
+      setDescription(value);
+    }, 500),
+    []
+  );
+
+  const debouncedUpdateConfig = useCallback(
+    debounce((index: number, field: keyof ActionConfig, value: any) => {
+      const newConfigs = [...configs];
+      newConfigs[index] = {
+        ...newConfigs[index],
+        [field]: value,
+      };
+      setConfigs(newConfigs);
+    }, 500),
+    [configs]
+  );
+
+  // Clean up model and editor when component unmounts
+  useEffect(() => {
+    return () => {
+      if (editorModel) {
+        editorModel.dispose();
+        setEditorModel(null);
+      }
+      if (editorInstance) {
+        editorInstance.dispose();
+        setEditorInstance(null);
+      }
+    };
+  }, [editorModel, editorInstance]);
+
+  // Update state when action prop changes - this should only load the existing code
+  useEffect(() => {
+    if (action) {
+      setName(action.name || '');
+      setType(action.type || 'input');
+      setIcon(action.icon || 'CodeIcon');
+      setColor(action.isBuiltIn ? '#666666' : (action.color || '#10a37f'));
+      setCode(action.code); // Just load the existing code without modification
+      setConfigs(action.config || []);
+      setDescription(action.description || '');
+      setWrapInAitomics(action.wrapInAitomics ?? true);
+    }
+    isInitialLoad.current = true;
+  }, [action]);
+
+  // Update code template when type or wrapInAitomics changes
+  useEffect(() => {
+    // Skip if this is the initial load
+    if (isInitialLoad.current) {
+      isInitialLoad.current = false;
+      return;
+    }
+
+    if (type === 'comparison') {
+      setCode(`// @ts-nocheck
+export function process(list1, list2, config: Config): any {
+  // This function should compare list1 and list2 and return a result
+  return 0;
+}`);
+    } else if (type === 'output') {
+      setCode(`// @ts-nocheck
+export function process(input: any[], config: Config): any {
+  // This function should process a list of elements and return a result
+  return input;
+}`);
+    } else if (!wrapInAitomics) {
+      if (type === 'transform') {
+        setCode(`// @ts-nocheck
+export function process(config: Config): any {
+  // When wrapInAitomics is disabled, this function should return an aitomics caller
+  // and only expects a configuration object containing actionName and your custom config values
+  return $(config.prompt, config.actionName);
+}`);
+      } else {
+        setCode(`// @ts-nocheck
+$(config.prompt, config.actionName)`);
+      }
+    } else {
+      setCode(`// @ts-nocheck
+export function process(input: any, config: Config): any {
+  // When wrapInAitomics is disabled, this function should return an aitomics caller
+  // and only expects a configuration object containing actionName and your custom config values
+  return input;
+}`);
+    }
+  }, [type, wrapInAitomics]);
 
   // Generate type definitions based on configs
   const generateTypeDefinitions = () => {
@@ -143,6 +285,9 @@ const ActionEditor: React.FC<ActionEditorProps> = ({
         case 'json':
           type = 'any';
           break;
+        case 'list':
+          type = 'string[]';
+          break;
       }
       // Convert label to lowercase and replace spaces with underscores
       const parsedLabel = config.label.toLowerCase().replace(/\s+/g, '_');
@@ -154,6 +299,7 @@ const ActionEditor: React.FC<ActionEditorProps> = ({
 }
 
 declare interface Config {
+  actionName: string; // The name of this action
 ${inputProperties}
 }`;
   };
@@ -161,19 +307,21 @@ ${inputProperties}
   // Update type definitions when configs change
   useEffect(() => {
     loader.init().then(monaco => {
-      // Clear all existing type definitions first
-      monaco.languages.typescript.typescriptDefaults.setExtraLibs([]);
-      
       // Reset the entire TypeScript language service
       monaco.languages.typescript.typescriptDefaults.setDiagnosticsOptions({
         noSemanticValidation: true,
         noSyntaxValidation: true,
       });
+
+      // Clear all existing type definitions
+      monaco.languages.typescript.typescriptDefaults.setExtraLibs([]);
+
+      // Configure compiler options
       monaco.languages.typescript.typescriptDefaults.setCompilerOptions({
         target: monaco.languages.typescript.ScriptTarget.ES2020,
         allowNonTsExtensions: true,
         moduleResolution: monaco.languages.typescript.ModuleResolutionKind.NodeJs,
-        module: monaco.languages.typescript.ModuleKind.CommonJS,
+        module: monaco.languages.typescript.ModuleKind.ESNext,
         noEmit: true,
         esModuleInterop: true,
         jsx: monaco.languages.typescript.JsxEmit.React,
@@ -211,19 +359,6 @@ ${inputProperties}
     }
   };
 
-  // Update state when action prop changes
-  useEffect(() => {
-    if (action) {
-      setName(action.name || '');
-      setType(action.type || 'input');
-      setIcon(action.icon || 'CodeIcon');
-      setColor(action.isBuiltIn ? '#666666' : (action.color || '#10a37f'));
-      setCode(action.code);
-      setConfigs(action.config || []);
-      setDescription(action.description || '');
-    }
-  }, [action]);
-
   const handleSave = () => {
     if (!action) return;
     
@@ -238,6 +373,7 @@ ${inputProperties}
       config: configs,
       description: description,
       isBuiltIn: action.isBuiltIn || false,
+      wrapInAitomics: wrapInAitomics,
     };
     
     onSave(updatedAction);
@@ -257,15 +393,6 @@ ${inputProperties}
 
   const handleRemoveConfig = (index: number) => {
     setConfigs(configs.filter((_, i) => i !== index));
-  };
-
-  const handleConfigChange = (index: number, field: keyof ActionConfig, value: any) => {
-    const newConfigs = [...configs];
-    newConfigs[index] = {
-      ...newConfigs[index],
-      [field]: value,
-    };
-    setConfigs(newConfigs);
   };
 
   const renderIcon = (iconName: string) => {
@@ -402,21 +529,32 @@ ${inputProperties}
         <Stack spacing={3}>
           <TextField
             label="Action Name"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
+            defaultValue={name}
+            onChange={(e) => {
+              // Update local state immediately
+              setName(e.target.value);
+              // Debounce the actual update
+              debouncedUpdateName(e.target.value);
+            }}
             fullWidth
             disabled={action?.isBuiltIn}
             sx={{
               '& .MuiOutlinedInput-root': {
                 borderRadius: 2,
+                transition: 'none',
               },
             }}
           />
 
           <TextField
             label="Description"
-            value={description}
-            onChange={(e) => setDescription(e.target.value)}
+            defaultValue={description}
+            onChange={(e) => {
+              // Update local state immediately
+              setDescription(e.target.value);
+              // Debounce the actual update
+              debouncedUpdateDescription(e.target.value);
+            }}
             fullWidth
             multiline
             rows={2}
@@ -424,6 +562,7 @@ ${inputProperties}
             sx={{
               '& .MuiOutlinedInput-root': {
                 borderRadius: 2,
+                transition: 'none',
               },
             }}
           />
@@ -758,12 +897,71 @@ ${inputProperties}
             </RadioGroup>
           </Box>
 
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            {type !== 'output' && type !== 'comparison' && (
+              <FormControlLabel
+                control={
+                  <Switch
+                    checked={wrapInAitomics}
+                    onChange={(e) => setWrapInAitomics(e.target.checked)}
+                    disabled={action?.isBuiltIn}
+                  />
+                }
+                label="Wrap code in Aitomics constructs"
+                sx={{
+                  '& .MuiFormControlLabel-label': {
+                    color: 'text.secondary',
+                  },
+                }}
+              />
+            )}
+            {type !== 'output' && type !== 'comparison' && (
+              <Tooltip 
+                title="By default, this should be enabled unless you have specific knowledge of Aitomics. Your code should be pure JavaScript. If disabled, the function should return an aitomics caller and the function should only expect a configuration object."
+                placement="right"
+                arrow
+              >
+                <IconButton
+                  size="small"
+                  sx={{
+                    color: 'text.secondary',
+                    '&:hover': {
+                      backgroundColor: 'rgba(0, 0, 0, 0.04)',
+                    },
+                  }}
+                >
+                  <InfoIcon fontSize="small" />
+                </IconButton>
+              </Tooltip>
+            )}
+          </Box>
+
           <Box>
             <Typography variant="subtitle2" sx={{ mb: 1 }}>JavaScript Code</Typography>
-            <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-              Write your transformation code here. The input object contains your configuration values.
-              Return the transformed data point.
-            </Typography>
+            {(!wrapInAitomics || type === 'output' || type === 'comparison') && (
+              <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                When wrapInAitomics is disabled, the function should return an aitomics caller. See the{' '}
+                <Link
+                  href="#"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    if (window.electron?.ipcRenderer) {
+                      window.electron.ipcRenderer.invoke('open-external-link', 'https://github.com/sebastiannicolajsen/aitomics');
+                    }
+                  }}
+                  sx={{
+                    color: 'primary.main',
+                    textDecoration: 'none',
+                    '&:hover': {
+                      textDecoration: 'underline',
+                    },
+                  }}
+                >
+                  Aitomics repository
+                </Link>
+                {' '}for more information.
+              </Typography>
+            )}
             <Box sx={{ 
               height: 300, 
               border: 1, 
@@ -774,8 +972,13 @@ ${inputProperties}
               <Editor
                 height="100%"
                 defaultLanguage="typescript"
+                language="typescript"
                 value={code}
-                onChange={handleEditorChange}
+                onChange={(value) => {
+                  if (value) {
+                    setCode(value);
+                  }
+                }}
                 theme="beige"
                 options={{
                   readOnly: action?.isBuiltIn,
@@ -791,6 +994,7 @@ ${inputProperties}
                   parameterHints: { enabled: true },
                   formatOnPaste: true,
                   formatOnType: true,
+                  model: null // Force model recreation
                 }}
                 beforeMount={(monaco) => {
                   // Reset the entire TypeScript language service
@@ -798,11 +1002,16 @@ ${inputProperties}
                     noSemanticValidation: true,
                     noSyntaxValidation: true,
                   });
+
+                  // Clear all existing type definitions
+                  monaco.languages.typescript.typescriptDefaults.setExtraLibs([]);
+
+                  // Configure compiler options
                   monaco.languages.typescript.typescriptDefaults.setCompilerOptions({
                     target: monaco.languages.typescript.ScriptTarget.ES2020,
                     allowNonTsExtensions: true,
                     moduleResolution: monaco.languages.typescript.ModuleResolutionKind.NodeJs,
-                    module: monaco.languages.typescript.ModuleKind.CommonJS,
+                    module: monaco.languages.typescript.ModuleKind.ESNext,
                     noEmit: true,
                     esModuleInterop: true,
                     jsx: monaco.languages.typescript.JsxEmit.React,
@@ -818,7 +1027,17 @@ ${inputProperties}
                     noImplicitThis: true,
                     alwaysStrict: true
                   });
-                  monaco.languages.typescript.typescriptDefaults.setExtraLibs([]);
+                }}
+                onMount={(editor, monaco) => {
+                  // Create a new model with explicit TypeScript settings
+                  const modelUri = monaco.Uri.parse('file:///action.ts');
+                  const model = monaco.editor.createModel(code, 'typescript', modelUri);
+                  
+                  // Set the model on the editor
+                  editor.setModel(model);
+                  
+                  // Force TypeScript mode
+                  monaco.editor.setModelLanguage(model, 'typescript');
                 }}
               />
             </Box>
@@ -875,13 +1094,24 @@ ${inputProperties}
                   </Box>
                   <TextField
                     label="Label"
-                    value={config.label}
-                    onChange={(e) => handleConfigChange(index, 'label', e.target.value)}
+                    defaultValue={config.label}
+                    onChange={(e) => {
+                      // Update local state immediately
+                      const newConfigs = [...configs];
+                      newConfigs[index] = {
+                        ...newConfigs[index],
+                        label: e.target.value,
+                      };
+                      setConfigs(newConfigs);
+                      // Debounce the actual update
+                      debouncedUpdateConfig(index, 'label', e.target.value);
+                    }}
                     fullWidth
                     disabled={action?.isBuiltIn}
                     sx={{
                       '& .MuiOutlinedInput-root': {
                         borderRadius: 2,
+                        transition: 'none',
                       },
                     }}
                   />
@@ -890,10 +1120,21 @@ ${inputProperties}
                     <Select
                       value={config.type}
                       label="Type"
-                      onChange={(e) => handleConfigChange(index, 'type', e.target.value)}
+                      onChange={(e) => {
+                        // Update local state immediately
+                        const newConfigs = [...configs];
+                        newConfigs[index] = {
+                          ...newConfigs[index],
+                          type: e.target.value as ActionConfig['type'],
+                        };
+                        setConfigs(newConfigs);
+                        // Debounce the actual update
+                        debouncedUpdateConfig(index, 'type', e.target.value as ActionConfig['type']);
+                      }}
                       disabled={action?.isBuiltIn}
                       sx={{
                         borderRadius: 2,
+                        transition: 'none',
                       }}
                     >
                       <MenuItem value="text">Text</MenuItem>
@@ -901,39 +1142,77 @@ ${inputProperties}
                       <MenuItem value="boolean">Boolean</MenuItem>
                       <MenuItem value="select">Select</MenuItem>
                       <MenuItem value="json">JSON</MenuItem>
+                      <MenuItem value="list">List</MenuItem>
                     </Select>
                   </FormControl>
                   {config.type === 'select' && (
                     <TextField
                       label="Options (comma-separated)"
-                      value={config.options?.join(',') || ''}
-                      onChange={(e) => handleConfigChange(index, 'options', e.target.value.split(','))}
+                      defaultValue={config.options?.join(',') || ''}
+                      onChange={(e) => {
+                        // Update local state immediately
+                        const newConfigs = [...configs];
+                        newConfigs[index] = {
+                          ...newConfigs[index],
+                          options: e.target.value.split(','),
+                        };
+                        setConfigs(newConfigs);
+                        // Debounce the actual update
+                        debouncedUpdateConfig(index, 'options', e.target.value.split(','));
+                      }}
                       fullWidth
                       disabled={action?.isBuiltIn}
                       helperText="Enter options separated by commas"
                       sx={{
                         '& .MuiOutlinedInput-root': {
                           borderRadius: 2,
+                          transition: 'none',
                         },
                       }}
                     />
                   )}
-                  <TextField
-                    label="Default Value"
-                    value={config.defaultValue || ''}
-                    onChange={(e) => handleConfigChange(index, 'defaultValue', e.target.value)}
-                    fullWidth
-                    disabled={action?.isBuiltIn}
-                    sx={{
-                      '& .MuiOutlinedInput-root': {
-                        borderRadius: 2,
-                      },
-                    }}
-                  />
+                  {config.type === 'list' && (
+                    <Box>
+                      <TextField
+                        label="Default Values (comma-separated)"
+                        defaultValue={Array.isArray(config.defaultValue) ? config.defaultValue.join(',') : ''}
+                        onChange={(e) => {
+                          // Update local state immediately
+                          const newConfigs = [...configs];
+                          newConfigs[index] = {
+                            ...newConfigs[index],
+                            defaultValue: e.target.value.split(',').map(v => v.trim()),
+                          };
+                          setConfigs(newConfigs);
+                          // Debounce the actual update
+                          debouncedUpdateConfig(index, 'defaultValue', e.target.value.split(',').map(v => v.trim()));
+                        }}
+                        fullWidth
+                        disabled={action?.isBuiltIn}
+                        helperText="Enter default values separated by commas"
+                        sx={{
+                          '& .MuiOutlinedInput-root': {
+                            borderRadius: 2,
+                            transition: 'none',
+                          },
+                        }}
+                      />
+                    </Box>
+                  )}
                   <TextField
                     label="Description"
-                    value={config.description || ''}
-                    onChange={(e) => handleConfigChange(index, 'description', e.target.value)}
+                    defaultValue={config.description || ''}
+                    onChange={(e) => {
+                      // Update local state immediately
+                      const newConfigs = [...configs];
+                      newConfigs[index] = {
+                        ...newConfigs[index],
+                        description: e.target.value,
+                      };
+                      setConfigs(newConfigs);
+                      // Debounce the actual update
+                      debouncedUpdateConfig(index, 'description', e.target.value);
+                    }}
                     fullWidth
                     multiline
                     rows={2}
@@ -941,6 +1220,7 @@ ${inputProperties}
                     sx={{
                       '& .MuiOutlinedInput-root': {
                         borderRadius: 2,
+                        transition: 'none',
                       },
                     }}
                   />
@@ -948,7 +1228,17 @@ ${inputProperties}
                     control={
                       <Switch
                         checked={config.required}
-                        onChange={(e) => handleConfigChange(index, 'required', e.target.checked)}
+                        onChange={(e) => {
+                          // Update local state immediately
+                          const newConfigs = [...configs];
+                          newConfigs[index] = {
+                            ...newConfigs[index],
+                            required: e.target.checked,
+                          };
+                          setConfigs(newConfigs);
+                          // Debounce the actual update
+                          debouncedUpdateConfig(index, 'required', e.target.checked);
+                        }}
                         disabled={action?.isBuiltIn}
                       />
                     }

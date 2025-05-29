@@ -53,6 +53,8 @@ interface ProjectListProps {
   selectedAction: Action | null;
   globalActions: Action[];
   setGlobalActions: React.Dispatch<React.SetStateAction<Action[]>>;
+  onActionDragStart?: (event: React.DragEvent, action: Action) => void;
+  onActionDragEnd?: () => void;
 }
 
 const ITEM_HEIGHT = 48;
@@ -87,6 +89,8 @@ const ProjectList: React.FC<ProjectListProps> = ({
   selectedAction,
   globalActions,
   setGlobalActions,
+  onActionDragStart,
+  onActionDragEnd,
 }) => {
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [isExportProjectsDialogOpen, setIsExportProjectsDialogOpen] = useState(false);
@@ -297,6 +301,18 @@ const ProjectList: React.FC<ProjectListProps> = ({
     onDeleteProject(projectId);
   };
 
+  const handleDragStart = (event: React.DragEvent, action: Action) => {
+    if (onActionDragStart) {
+      onActionDragStart(event, action);
+    }
+  };
+
+  const handleDragEnd = () => {
+    if (onActionDragEnd) {
+      onActionDragEnd();
+    }
+  };
+
   return (
     <Box sx={{ height: '100%', display: 'flex' }}>
       {/* Left sidebar with projects/actions list */}
@@ -321,6 +337,7 @@ const ProjectList: React.FC<ProjectListProps> = ({
                     config: [],
                     isBuiltIn: false,
                     description: '',
+                    wrapInAitomics: true,
                   };
                   onEditAction(newAction);
                 }
@@ -418,14 +435,44 @@ const ProjectList: React.FC<ProjectListProps> = ({
               InputProps={{
                 startAdornment: (
                   <InputAdornment position="start">
-                    <SearchIcon sx={{ color: 'text.secondary', fontSize: '1rem' }} />
+                    <SearchIcon sx={{ color: 'text.secondary', fontSize: '0.875rem' }} />
                   </InputAdornment>
                 ),
               }}
               sx={{ 
                 mb: 1,
                 '& .MuiOutlinedInput-root': {
-                  height: 32,
+                  height: 40,
+                  background: 'linear-gradient(145deg, #f7f7f8 0%, #f0f0f1 100%)',
+                  borderRadius: 1,
+                  transition: 'all 0.2s ease-in-out',
+                  '& input': {
+                    fontSize: '0.75rem',
+                    color: 'text.secondary',
+                    '&::placeholder': {
+                      color: 'text.secondary',
+                      opacity: 0.7,
+                    },
+                  },
+                  '& fieldset': {
+                    borderColor: 'rgba(0, 0, 0, 0.1)',
+                    transition: 'all 0.2s ease-in-out',
+                  },
+                  '&:hover': {
+                    background: 'linear-gradient(145deg, #e6f7f1 0%, #d1f0e6 100%)',
+                    boxShadow: '0 4px 12px rgba(16, 163, 127, 0.1)',
+                    '& fieldset': {
+                      borderColor: 'rgba(16, 163, 127, 0.3)',
+                    },
+                  },
+                  '&.Mui-focused': {
+                    background: 'linear-gradient(145deg, #e6f7f1 0%, #d1f0e6 100%)',
+                    boxShadow: '0 4px 12px rgba(16, 163, 127, 0.15)',
+                    '& fieldset': {
+                      borderColor: '#10a37f',
+                      borderWidth: '1px',
+                    },
+                  },
                 },
               }}
             />
@@ -438,31 +485,51 @@ const ProjectList: React.FC<ProjectListProps> = ({
                 input={<OutlinedInput />}
                 renderValue={(selected) => {
                   if (selected.length === 0) {
-                    return <em>Filter by type</em>;
+                    return <em style={{ color: 'text.secondary', opacity: 0.7, fontSize: '0.75rem' }}>Filter by type</em>;
                   }
                   return (
-                    <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
-                      {selected.map((type) => (
-                        <Chip
-                          key={type}
-                          label={type}
-                          size="small"
-                          sx={{
-                            height: 24,
-                            fontSize: '0.7rem',
-                            backgroundColor: getTypeColor(type),
-                            color: 'white',
-                          }}
-                        />
-                      ))}
-                    </Box>
+                    <Typography sx={{ 
+                      fontSize: '0.75rem',
+                      color: 'text.secondary',
+                      whiteSpace: 'nowrap',
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis'
+                    }}>
+                      {selected.length === 1 
+                        ? selected[0] 
+                        : `${selected.length} types selected`}
+                    </Typography>
                   );
                 }}
                 MenuProps={MenuProps}
                 sx={{
-                  height: 32,
+                  height: 40,
+                  background: 'linear-gradient(145deg, #f7f7f8 0%, #f0f0f1 100%)',
+                  borderRadius: 1,
+                  transition: 'all 0.2s ease-in-out',
                   '& .MuiSelect-select': {
-                    py: 0.5,
+                    py: 1,
+                    fontSize: '0.75rem',
+                    color: 'text.secondary',
+                  },
+                  '& .MuiOutlinedInput-notchedOutline': {
+                    borderColor: 'rgba(0, 0, 0, 0.1)',
+                    transition: 'all 0.2s ease-in-out',
+                  },
+                  '&:hover': {
+                    background: 'linear-gradient(145deg, #e6f7f1 0%, #d1f0e6 100%)',
+                    boxShadow: '0 4px 12px rgba(16, 163, 127, 0.1)',
+                    '& .MuiOutlinedInput-notchedOutline': {
+                      borderColor: 'rgba(16, 163, 127, 0.3)',
+                    },
+                  },
+                  '&.Mui-focused': {
+                    background: 'linear-gradient(145deg, #e6f7f1 0%, #d1f0e6 100%)',
+                    boxShadow: '0 4px 12px rgba(16, 163, 127, 0.15)',
+                    '& .MuiOutlinedInput-notchedOutline': {
+                      borderColor: '#10a37f',
+                      borderWidth: '1px',
+                    },
                   },
                 }}
               >
@@ -474,9 +541,16 @@ const ProjectList: React.FC<ProjectListProps> = ({
                       display: 'flex',
                       alignItems: 'center',
                       gap: 1,
-                      py: 0.5,
+                      py: 1,
+                      transition: 'all 0.2s ease-in-out',
                       '&:hover': {
-                        backgroundColor: `${getTypeColor(type)}10`,
+                        background: `linear-gradient(145deg, ${getTypeColor(type)}10 0%, ${getTypeColor(type)}05 100%)`,
+                      },
+                      '&.Mui-selected': {
+                        background: `linear-gradient(145deg, ${getTypeColor(type)}20 0%, ${getTypeColor(type)}15 100%)`,
+                        '&:hover': {
+                          background: `linear-gradient(145deg, ${getTypeColor(type)}30 0%, ${getTypeColor(type)}25 100%)`,
+                        },
                       },
                     }}
                   >
@@ -557,6 +631,9 @@ const ProjectList: React.FC<ProjectListProps> = ({
                 return (
                   <Grid item key={action.id} sx={{ width: '100%', p: 0 }}>
                     <Paper
+                      draggable
+                      onDragStart={(e) => handleDragStart(e, action)}
+                      onDragEnd={handleDragEnd}
                       onClick={() => onEditAction(action)}
                       sx={{
                         p: 1,
@@ -564,7 +641,7 @@ const ProjectList: React.FC<ProjectListProps> = ({
                         display: 'flex',
                         flexDirection: 'row',
                         alignItems: 'center',
-                        cursor: 'pointer',
+                        cursor: 'grab',
                         position: 'relative',
                         background: selectedAction?.id === action.id
                           ? `linear-gradient(145deg, ${action.isBuiltIn ? '#66666630' : action.color}30 0%, ${action.isBuiltIn ? '#66666620' : action.color}20 100%)`
@@ -576,6 +653,9 @@ const ProjectList: React.FC<ProjectListProps> = ({
                         '&:hover': {
                           background: `linear-gradient(145deg, ${action.isBuiltIn ? '#66666630' : action.color}30 0%, ${action.isBuiltIn ? '#66666620' : action.color}20 100%)`,
                           boxShadow: `0 4px 12px ${action.isBuiltIn ? '#66666620' : action.color}20`,
+                        },
+                        '&:active': {
+                          cursor: 'grabbing',
                         },
                         mb: 0.5,
                         borderRadius: 1,

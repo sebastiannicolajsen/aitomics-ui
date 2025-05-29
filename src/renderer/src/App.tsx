@@ -87,6 +87,8 @@ const App: React.FC = () => {
   const [isActionEditorOpen, setIsActionEditorOpen] = useState(false);
   const [selectedAction, setSelectedAction] = useState<Action | null>(null);
   const [globalActions, setGlobalActions] = useState<Action[]>([]);
+  const [isDraggingAction, setIsDraggingAction] = useState(false);
+  const [draggedAction, setDraggedAction] = useState<Action | null>(null);
 
   useEffect(() => {
     // Check if we're running in Electron
@@ -254,6 +256,42 @@ const App: React.FC = () => {
     }
   };
 
+  const handleActionDragStart = (event: React.DragEvent, action: Action) => {
+    console.log('Drag start with action:', action);
+    event.stopPropagation();
+    setIsDraggingAction(true);
+    setDraggedAction(action);
+    
+    // Set the data in the drag event
+    const actionData = JSON.stringify(action);
+    console.log('Setting drag data:', actionData);
+    event.dataTransfer.setData('application/json', actionData);
+    event.dataTransfer.effectAllowed = 'copy';
+    
+    // Create a custom drag image
+    const dragImage = document.createElement('div');
+    dragImage.style.width = '100px';
+    dragImage.style.height = '100px';
+    dragImage.style.background = action.color;
+    dragImage.style.borderRadius = '8px';
+    dragImage.style.display = 'flex';
+    dragImage.style.alignItems = 'center';
+    dragImage.style.justifyContent = 'center';
+    dragImage.style.color = 'white';
+    dragImage.style.fontWeight = 'bold';
+    dragImage.textContent = action.name;
+    document.body.appendChild(dragImage);
+    event.dataTransfer.setDragImage(dragImage, 50, 50);
+    
+    // Remove the element after drag starts
+    setTimeout(() => document.body.removeChild(dragImage), 0);
+  };
+
+  const handleActionDragEnd = () => {
+    setIsDraggingAction(false);
+    setDraggedAction(null);
+  };
+
   return (
     <ThemeProvider theme={openAITheme}>
       <CssBaseline />
@@ -274,6 +312,8 @@ const App: React.FC = () => {
             selectedAction={selectedAction}
             globalActions={globalActions}
             setGlobalActions={setGlobalActions}
+            onActionDragStart={handleActionDragStart}
+            onActionDragEnd={handleActionDragEnd}
           />
         </Box>
         <Box sx={{ flexGrow: 1, p: 3, bgcolor: openAITheme.palette.background.default }}>
@@ -292,6 +332,8 @@ const App: React.FC = () => {
               project={selectedProject}
               onUpdateProject={handleUpdateProject}
               globalActions={globalActions}
+              isDraggingAction={isDraggingAction}
+              draggedAction={draggedAction}
             />
           ) : (
             <Box sx={{ p: 3, textAlign: 'center', color: openAITheme.palette.text.secondary }}>

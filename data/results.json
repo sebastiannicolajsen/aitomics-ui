@@ -1,0 +1,467 @@
+[
+  {
+    "output": "NEUTRAL",
+    "caller": "aitomic.upperCase",
+    "input": {
+      "output": "NEUTRAL",
+      "caller": "LLM Analysis",
+      "input": {
+        "output": "The product is decent, but the company's communication could be better. They didn't notify me about shipping delays.",
+        "caller": "Import review: Extract JSON Attribute",
+        "input": {
+          "output": {
+            "text": "The product is decent, but the company's communication could be better. They didn't notify me about shipping delays.",
+            "codes": "NEUTRAL"
+          },
+          "caller": "Import review",
+          "input": {
+            "text": "The product is decent, but the company's communication could be better. They didn't notify me about shipping delays.",
+            "codes": "NEUTRAL"
+          },
+          "root": true,
+          "level": 1
+        },
+        "root": false,
+        "level": 2
+      },
+      "root": false,
+      "level": 3
+    },
+    "root": false,
+    "level": 4
+  },
+  {
+    "output": "NEUTRAL",
+    "caller": "aitomic.upperCase",
+    "input": {
+      "output": "NEUTRAL",
+      "caller": "LLM Analysis",
+      "input": {
+        "output": "I'm happy with my purchase overall. The product is good quality and the price was fair. Shipping was a bit slow though.",
+        "caller": "Import review: Extract JSON Attribute",
+        "input": {
+          "output": {
+            "text": "I'm happy with my purchase overall. The product is good quality and the price was fair. Shipping was a bit slow though.",
+            "codes": "POSITIVE"
+          },
+          "caller": "Import review",
+          "input": {
+            "text": "I'm happy with my purchase overall. The product is good quality and the price was fair. Shipping was a bit slow though.",
+            "codes": "POSITIVE"
+          },
+          "root": true,
+          "level": 1
+        },
+        "root": false,
+        "level": 2
+      },
+      "root": false,
+      "level": 3
+    },
+    "root": false,
+    "level": 4
+  },
+  {
+    "output": "NEUTRAL",
+    "caller": "aitomic.upperCase",
+    "input": {
+      "output": "NEUTRAL",
+      "caller": "LLM Analysis",
+      "input": {
+        "output": "Not bad, but not great either. The product does what it says, but there are some minor issues that could be improved.",
+        "caller": "Import review: Extract JSON Attribute",
+        "input": {
+          "output": {
+            "text": "Not bad, but not great either. The product does what it says, but there are some minor issues that could be improved.",
+            "codes": "NEUTRAL"
+          },
+          "caller": "Import review",
+          "input": {
+            "text": "Not bad, but not great either. The product does what it says, but there are some minor issues that could be improved.",
+            "codes": "NEUTRAL"
+          },
+          "root": true,
+          "level": 1
+        },
+        "root": false,
+        "level": 2
+      },
+      "root": false,
+      "level": 3
+    },
+    "root": false,
+    "level": 4
+  },
+  {
+    "output": "NEGATIVE",
+    "caller": "aitomic.upperCase",
+    "input": {
+      "output": "NEGATIVE",
+      "caller": "LLM Analysis",
+      "input": {
+        "output": "The product works well enough, but the customer service was terrible. They were rude and unhelpful when I needed assistance.",
+        "caller": "Import review: Extract JSON Attribute",
+        "input": {
+          "output": {
+            "text": "The product works well enough, but the customer service was terrible. They were rude and unhelpful when I needed assistance.",
+            "codes": "NEGATIVE"
+          },
+          "caller": "Import review",
+          "input": {
+            "text": "The product works well enough, but the customer service was terrible. They were rude and unhelpful when I needed assistance.",
+            "codes": "NEGATIVE"
+          },
+          "root": true,
+          "level": 1
+        },
+        "root": false,
+        "level": 2
+      },
+      "root": false,
+      "level": 3
+    },
+    "root": false,
+    "level": 4
+  },
+  {
+    "output": "NEUTRAL",
+    "caller": "aitomic.upperCase",
+    "input": {
+      "output": "NEUTRAL",
+      "caller": "LLM Analysis",
+      "input": {
+        "output": "It's an okay product, but I expected better quality for the price. The features are good but the build quality is questionable.",
+        "caller": "Import review: Extract JSON Attribute",
+        "input": {
+          "output": {
+            "text": "It's an okay product, but I expected better quality for the price. The features are good but the build quality is questionable.",
+            "codes": "NEUTRAL"
+          },
+          "caller": "Import review",
+          "input": {
+            "text": "It's an okay product, but I expected better quality for the price. The features are good but the build quality is questionable.",
+            "codes": "NEUTRAL"
+          },
+          "root": true,
+          "level": 1
+        },
+        "root": false,
+        "level": 2
+      },
+      "root": false,
+      "level": 3
+    },
+    "root": false,
+    "level": 4
+  },
+  {
+    "output": "NEGATIVE",
+    "caller": "aitomic.upperCase",
+    "input": {
+      "output": "NEGATIVE",
+      "caller": "LLM Analysis",
+      "input": {
+        "output": "The product was defective and the return process was a nightmare. Would not recommend. At least they eventually gave me a refund.",
+        "caller": "Import review: Extract JSON Attribute",
+        "input": {
+          "output": {
+            "text": "The product was defective and the return process was a nightmare. Would not recommend. At least they eventually gave me a refund.",
+            "codes": "NEGATIVE"
+          },
+          "caller": "Import review",
+          "input": {
+            "text": "The product was defective and the return process was a nightmare. Would not recommend. At least they eventually gave me a refund.",
+            "codes": "NEGATIVE"
+          },
+          "root": true,
+          "level": 1
+        },
+        "root": false,
+        "level": 2
+      },
+      "root": false,
+      "level": 3
+    },
+    "root": false,
+    "level": 4
+  },
+  {
+    "output": "NEUTRAL",
+    "caller": "aitomic.upperCase",
+    "input": {
+      "output": "NEUTRAL",
+      "caller": "LLM Analysis",
+      "input": {
+        "output": "I'm extremely satisfied with my purchase. The product is durable and the service was excellent. Just wish it came in more colors.",
+        "caller": "Import review: Extract JSON Attribute",
+        "input": {
+          "output": {
+            "text": "I'm extremely satisfied with my purchase. The product is durable and the service was excellent. Just wish it came in more colors.",
+            "codes": "POSITIVE"
+          },
+          "caller": "Import review",
+          "input": {
+            "text": "I'm extremely satisfied with my purchase. The product is durable and the service was excellent. Just wish it came in more colors.",
+            "codes": "POSITIVE"
+          },
+          "root": true,
+          "level": 1
+        },
+        "root": false,
+        "level": 2
+      },
+      "root": false,
+      "level": 3
+    },
+    "root": false,
+    "level": 4
+  },
+  {
+    "output": "NEUTRAL",
+    "caller": "aitomic.upperCase",
+    "input": {
+      "output": "NEUTRAL",
+      "caller": "LLM Analysis",
+      "input": {
+        "output": "The product is fine, but the instructions were unclear and the packaging was excessive. Customer service was helpful though.",
+        "caller": "Import review: Extract JSON Attribute",
+        "input": {
+          "output": {
+            "text": "The product is fine, but the instructions were unclear and the packaging was excessive. Customer service was helpful though.",
+            "codes": "NEUTRAL"
+          },
+          "caller": "Import review",
+          "input": {
+            "text": "The product is fine, but the instructions were unclear and the packaging was excessive. Customer service was helpful though.",
+            "codes": "NEUTRAL"
+          },
+          "root": true,
+          "level": 1
+        },
+        "root": false,
+        "level": 2
+      },
+      "root": false,
+      "level": 3
+    },
+    "root": false,
+    "level": 4
+  },
+  {
+    "output": "NEUTRAL",
+    "caller": "aitomic.upperCase",
+    "input": {
+      "output": "NEUTRAL",
+      "caller": "LLM Analysis",
+      "input": {
+        "output": "This is exactly what I needed! The quality is outstanding and the price is reasonable. Though the instructions could be clearer.",
+        "caller": "Import review: Extract JSON Attribute",
+        "input": {
+          "output": {
+            "text": "This is exactly what I needed! The quality is outstanding and the price is reasonable. Though the instructions could be clearer.",
+            "codes": "POSITIVE"
+          },
+          "caller": "Import review",
+          "input": {
+            "text": "This is exactly what I needed! The quality is outstanding and the price is reasonable. Though the instructions could be clearer.",
+            "codes": "POSITIVE"
+          },
+          "root": true,
+          "level": 1
+        },
+        "root": false,
+        "level": 2
+      },
+      "root": false,
+      "level": 3
+    },
+    "root": false,
+    "level": 4
+  },
+  {
+    "output": "NEGATIVE",
+    "caller": "aitomic.upperCase",
+    "input": {
+      "output": "NEGATIVE",
+      "caller": "LLM Analysis",
+      "input": {
+        "output": "Terrible experience. The product broke after one use and they refused to refund me. The only good thing was the quick delivery.",
+        "caller": "Import review: Extract JSON Attribute",
+        "input": {
+          "output": {
+            "text": "Terrible experience. The product broke after one use and they refused to refund me. The only good thing was the quick delivery.",
+            "codes": "NEGATIVE"
+          },
+          "caller": "Import review",
+          "input": {
+            "text": "Terrible experience. The product broke after one use and they refused to refund me. The only good thing was the quick delivery.",
+            "codes": "NEGATIVE"
+          },
+          "root": true,
+          "level": 1
+        },
+        "root": false,
+        "level": 2
+      },
+      "root": false,
+      "level": 3
+    },
+    "root": false,
+    "level": 4
+  },
+  {
+    "output": "NEUTRAL",
+    "caller": "aitomic.upperCase",
+    "input": {
+      "output": "NEUTRAL",
+      "caller": "LLM Analysis",
+      "input": {
+        "output": "The item was okay, nothing special. Shipping took longer than expected, but at least it arrived in good condition.",
+        "caller": "Import review: Extract JSON Attribute",
+        "input": {
+          "output": {
+            "text": "The item was okay, nothing special. Shipping took longer than expected, but at least it arrived in good condition.",
+            "codes": "NEUTRAL"
+          },
+          "caller": "Import review",
+          "input": {
+            "text": "The item was okay, nothing special. Shipping took longer than expected, but at least it arrived in good condition.",
+            "codes": "NEUTRAL"
+          },
+          "root": true,
+          "level": 1
+        },
+        "root": false,
+        "level": 2
+      },
+      "root": false,
+      "level": 3
+    },
+    "root": false,
+    "level": 4
+  },
+  {
+    "output": "POSITIVE",
+    "caller": "aitomic.upperCase",
+    "input": {
+      "output": "POSITIVE",
+      "caller": "LLM Analysis",
+      "input": {
+        "output": "I can't believe how amazing this product is! It solved all my problems and the support team was fantastic. Though it did take a while to set up.",
+        "caller": "Import review: Extract JSON Attribute",
+        "input": {
+          "output": {
+            "text": "I can't believe how amazing this product is! It solved all my problems and the support team was fantastic. Though it did take a while to set up.",
+            "codes": "POSITIVE"
+          },
+          "caller": "Import review",
+          "input": {
+            "text": "I can't believe how amazing this product is! It solved all my problems and the support team was fantastic. Though it did take a while to set up.",
+            "codes": "POSITIVE"
+          },
+          "root": true,
+          "level": 1
+        },
+        "root": false,
+        "level": 2
+      },
+      "root": false,
+      "level": 3
+    },
+    "root": false,
+    "level": 4
+  },
+  {
+    "output": "NEUTRAL",
+    "caller": "aitomic.upperCase",
+    "input": {
+      "output": "NEUTRAL",
+      "caller": "LLM Analysis",
+      "input": {
+        "output": "The product works as described, but the price seems a bit high for what you get. However, the customer service was responsive when I had questions.",
+        "caller": "Import review: Extract JSON Attribute",
+        "input": {
+          "output": {
+            "text": "The product works as described, but the price seems a bit high for what you get. However, the customer service was responsive when I had questions.",
+            "codes": "NEUTRAL"
+          },
+          "caller": "Import review",
+          "input": {
+            "text": "The product works as described, but the price seems a bit high for what you get. However, the customer service was responsive when I had questions.",
+            "codes": "NEUTRAL"
+          },
+          "root": true,
+          "level": 1
+        },
+        "root": false,
+        "level": 2
+      },
+      "root": false,
+      "level": 3
+    },
+    "root": false,
+    "level": 4
+  },
+  {
+    "output": "POSITIVE",
+    "caller": "aitomic.upperCase",
+    "input": {
+      "output": "POSITIVE",
+      "caller": "LLM Analysis",
+      "input": {
+        "output": "Great quality and fast shipping! The product exceeded my expectations. Will definitely buy again.",
+        "caller": "Import review: Extract JSON Attribute",
+        "input": {
+          "output": {
+            "text": "Great quality and fast shipping! The product exceeded my expectations. Will definitely buy again.",
+            "codes": "POSITIVE"
+          },
+          "caller": "Import review",
+          "input": {
+            "text": "Great quality and fast shipping! The product exceeded my expectations. Will definitely buy again.",
+            "codes": "POSITIVE"
+          },
+          "root": true,
+          "level": 1
+        },
+        "root": false,
+        "level": 2
+      },
+      "root": false,
+      "level": 3
+    },
+    "root": false,
+    "level": 4
+  },
+  {
+    "output": "NEGATIVE",
+    "caller": "aitomic.upperCase",
+    "input": {
+      "output": "NEGATIVE",
+      "caller": "LLM Analysis",
+      "input": {
+        "output": "The product arrived damaged and the customer service was unhelpful. I'm very disappointed with my purchase.",
+        "caller": "Import review: Extract JSON Attribute",
+        "input": {
+          "output": {
+            "text": "The product arrived damaged and the customer service was unhelpful. I'm very disappointed with my purchase.",
+            "codes": "NEGATIVE"
+          },
+          "caller": "Import review",
+          "input": {
+            "text": "The product arrived damaged and the customer service was unhelpful. I'm very disappointed with my purchase.",
+            "codes": "NEGATIVE"
+          },
+          "root": true,
+          "level": 1
+        },
+        "root": false,
+        "level": 2
+      },
+      "root": false,
+      "level": 3
+    },
+    "root": false,
+    "level": 4
+  }
+]

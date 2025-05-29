@@ -19,5 +19,17 @@ contextBridge.exposeInMainWorld('electron', {
             }
             return ipcRenderer.invoke.apply(ipcRenderer, __spreadArray([channel], args, false));
         },
+        on: function (channel, func) {
+            ipcRenderer.on(channel, function (_event) {
+                var args = [];
+                for (var _i = 1; _i < arguments.length; _i++) {
+                    args[_i - 1] = arguments[_i];
+                }
+                return func.apply(void 0, args);
+            });
+        },
+        removeListener: function (channel, func) {
+            ipcRenderer.removeListener(channel, func);
+        }
     },
 });

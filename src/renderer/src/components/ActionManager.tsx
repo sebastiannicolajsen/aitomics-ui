@@ -22,15 +22,20 @@ interface ActionManagerProps {
   actions: Action[];
   onSaveAction: (action: Action) => void;
   onDeleteAction: (actionId: string) => void;
+  onDragStart?: (event: React.DragEvent, action: Action) => void;
+  onDragEnd?: () => void;
 }
 
 const ActionManager: React.FC<ActionManagerProps> = ({
   actions,
   onSaveAction,
   onDeleteAction,
+  onDragStart,
+  onDragEnd,
 }) => {
   const [isEditorOpen, setIsEditorOpen] = useState(false);
   const [selectedAction, setSelectedAction] = useState<Action | undefined>();
+  const [isDragging, setIsDragging] = useState(false);
 
   const handleEdit = (action: Action) => {
     setSelectedAction(action);
@@ -63,6 +68,20 @@ const ActionManager: React.FC<ActionManagerProps> = ({
     }
   };
 
+  const handleDragStart = (event: React.DragEvent, action: Action) => {
+    setIsDragging(true);
+    if (onDragStart) {
+      onDragStart(event, action);
+    }
+  };
+
+  const handleDragEnd = () => {
+    setIsDragging(false);
+    if (onDragEnd) {
+      onDragEnd();
+    }
+  };
+
   return (
     <Box>
       <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
@@ -80,11 +99,25 @@ const ActionManager: React.FC<ActionManagerProps> = ({
           {actions.map((action) => (
             <ListItem
               key={action.id}
+              draggable
+              onDragStart={(e) => handleDragStart(e, action)}
+              onDragEnd={handleDragEnd}
               sx={{
                 borderBottom: '1px solid rgba(0, 0, 0, 0.12)',
                 '&:last-child': {
                   borderBottom: 'none',
                 },
+                cursor: 'grab',
+                '&:active': {
+                  cursor: 'grabbing',
+                },
+                transition: 'all 0.2s ease',
+                '&:hover': {
+                  backgroundColor: 'rgba(0, 0, 0, 0.04)',
+                  transform: 'translateY(-1px)',
+                  boxShadow: '0 2px 4px rgba(0,0,0,0.05)',
+                },
+                opacity: isDragging ? 0.5 : 1,
               }}
             >
               <Box
@@ -94,8 +127,16 @@ const ActionManager: React.FC<ActionManagerProps> = ({
                   borderRadius: '50%',
                   backgroundColor: action.isBuiltIn ? '#666666' : action.color,
                   mr: 2,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  color: 'white',
+                  fontSize: '0.875rem',
+                  fontWeight: 500,
                 }}
-              />
+              >
+                {action.type.charAt(0).toUpperCase()}
+              </Box>
               <ListItemText
                 primary={action.name}
                 secondary={
