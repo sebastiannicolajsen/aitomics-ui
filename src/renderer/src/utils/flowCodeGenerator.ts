@@ -135,6 +135,15 @@ const fileCache = new Map();
 
 // Function to parse file content based on file type
 async function parseFileContent(filePath, nodeName) {
+  // Log UI file loading regardless of cache status
+  if (UI_LOGGING) {
+    console.log('[FLOW_UI_LOG] ' + JSON.stringify({
+      type: 'additional_file',
+      nodeName: nodeName,
+      filePath: filePath
+    }));
+  }
+
   // Check cache first
   if (fileCache.has(filePath)) {
     console.log('[FLOW] Using cached content for:', safeStringify(filePath));
@@ -436,7 +445,6 @@ async function executeFlow() {
       return input;
     }
     try {
-      console.log('[FLOW] Running node:', nodeName);
       return await caller.run(input);
     } catch (error) {
       console.error('[FLOW_ERROR] Error running node:', {
@@ -498,7 +506,7 @@ async function executeFlow() {
     for (let i = 0; i < itemsToProcess.length; i++) {
       const item = itemsToProcess[i];
       try {
-        // Log UI item update if enabled
+        // Log UI item update at the start of each iteration
         if (UI_LOGGING) {
           console.log('[FLOW_UI_LOG] ' + JSON.stringify({
             type: 'item_update',
@@ -517,6 +525,8 @@ async function executeFlow() {
         const importCaller = callers[${JSON.stringify(block.id)}];
         if (importCaller) {
           const importInput = result;
+          const importTime = new Date();
+          console.log('[FLOW] conducting import: ${JSON.stringify(block.name || block.id)} (' + importTime.toISOString().slice(11, 23) + ')');
           result = await runCaller(${JSON.stringify(block.id)}, result, ${JSON.stringify(block.name || block.id)});
           
           // Log UI import if enabled
@@ -532,11 +542,13 @@ async function executeFlow() {
         }
         
         // Run all transforms in sequence if there are any
-        ${callSequence.length > 0 ? callSequence.map(transformBlock => `
+        ${callSequence.length > 0 ? callSequence.map((transformBlock, index) => `
         // Store the input before transformation
         transformInput = result;
         
         // Run the transform and store result
+        const time_${transformBlock.id.replace(/[^a-zA-Z0-9]/g, '_')} = new Date();
+        console.log('[FLOW] conducting transformation: ${JSON.stringify(transformBlock.name || transformBlock.id)} (' + time_${transformBlock.id.replace(/[^a-zA-Z0-9]/g, '_')}.toISOString().slice(11, 23) + ')');
         result = await runCaller(${JSON.stringify(transformBlock.id)}, result, ${JSON.stringify(transformBlock.name || transformBlock.id)});
         
         // Log UI transformation if enabled
@@ -615,27 +627,28 @@ async function executeFlow() {
     const list1 = results.get(${JSON.stringify(source1)}) || [];
     const list2 = results.get(${JSON.stringify(source2)}) || [];
     
-    console.log('[FLOW] Running comparison: ${JSON.stringify(block.name || block.id)}');
-    console.log('[FLOW] Input list sizes:', { list1: list1.length, list2: list2.length });
-    
     try {
+      // Log the comparison start
+      console.log('[FLOW] Running comparison between ${JSON.stringify(source1Import?.name || source1)} and ${JSON.stringify(source2Import?.name || source2)}');
+      
       const comparisonResult = await comparisonCallers[${JSON.stringify(block.id)}](list1, list2);
       comparisonResults.set(${JSON.stringify(block.id)}, comparisonResult);
 
       // Log UI comparison if enabled
       if (UI_LOGGING) {
+        // Log the comparison details for inspection and UI state
         console.log('[FLOW_UI_LOG] ' + JSON.stringify({
-          type: 'comparison',
+          type: 'comparison_in_log',
           nodeId: ${JSON.stringify(block.id)},
           nodeName: ${JSON.stringify(block.name || block.id)},
-          action: ${JSON.stringify(nodeInfo.action.name)},
+          actionName: ${JSON.stringify(nodeInfo.action.name)},
           list1: ${JSON.stringify(source1Import?.name || source1)},
           list2: ${JSON.stringify(source2Import?.name || source2)},
+          list1Size: list1.length,
+          list2Size: list2.length,
           comparisonResult: comparisonResult
         }));
       }
-
-      console.log('[FLOW] Comparison completed: ${JSON.stringify(block.name || block.id)}');
     } catch (error) {
       console.error('[FLOW_ERROR] Error running comparison:', {
         node: ${JSON.stringify(block.name || block.id)},
@@ -678,16 +691,15 @@ async function executeFlow() {
       }
       
       try {
-        console.log('[FLOW] Running export: ${block.name || block.id}');
-        const exportResult = await exportCallers['${block.id}'](data);
-        
-        // Save the export result to file
         const outputPath = '${block.outputPath}/${block.outputFilename}';
         if (!outputPath || outputPath === '/') {
           console.warn('[FLOW_ERROR] No output file specified for export:', safeStringify('${block.name || block.id}'));
           return;
         }
         
+        const exportResult = await exportCallers['${block.id}'](data);
+        
+        // Save the export result to file
         fs.writeFileSync(
           outputPath,
           typeof exportResult === 'string' ? exportResult : JSON.stringify(exportResult, null, 2),
@@ -695,6 +707,18 @@ async function executeFlow() {
         );
         
         console.log('[FLOW] Export completed: ${block.name || block.id}');
+
+        // Log UI export after completion if enabled
+        if (UI_LOGGING) {
+          console.log('[FLOW_UI_LOG] ' + JSON.stringify({
+            type: 'export',
+            nodeId: ${JSON.stringify(block.id)},
+            nodeName: ${JSON.stringify(block.name || block.id)},
+            actionName: ${JSON.stringify(nodeInfo.action.name)},
+            outputPath: ${JSON.stringify(block.outputPath)},
+            outputFilename: ${JSON.stringify(block.outputFilename)}
+          }));
+        }
       } catch (error) {
         console.error('[FLOW_ERROR] Error running export:', safeStringify({
           node: '${block.name || block.id}',

@@ -2098,9 +2098,36 @@ const BlockEditor: React.FC<BlockEditorProps> = ({
                     <TextField
                       label="Output Filename"
                       defaultValue={selectedNode.data.outputFilename || ''}
-                      onChange={(e) => {
-                        // Update local state immediately
+                      onBlur={(e) => {
                         if (selectedNode) {
+                          // Update project blocks
+                          const updatedBlocks = project.blocks.map((block) =>
+                            block.id === selectedNode.id
+                              ? { ...block, outputFilename: e.target.value }
+                              : block
+                          );
+                          
+                          // Update project state
+                          onUpdateProject({
+                            ...project,
+                            blocks: updatedBlocks,
+                            updatedAt: new Date().toISOString(),
+                          });
+
+                          // Update nodes state
+                          setNodes(nodes => nodes.map(n => 
+                            n.id === selectedNode.id 
+                              ? { 
+                                  ...n, 
+                                  data: { 
+                                    ...n.data, 
+                                    outputFilename: e.target.value 
+                                  } 
+                                }
+                              : n
+                          ));
+
+                          // Update selected node data
                           setSelectedNode({
                             ...selectedNode,
                             data: {
@@ -2109,8 +2136,6 @@ const BlockEditor: React.FC<BlockEditorProps> = ({
                             }
                           });
                         }
-                        // Debounce the actual update
-                        debouncedUpdateOutputFilename(e.target.value);
                       }}
                       fullWidth
                       placeholder="Enter output filename..."

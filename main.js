@@ -21,6 +21,8 @@ const actionStore = new Store({
 // Set development mode
 process.env.NODE_ENV = 'development';
 
+let currentFlowProcess = null;
+
 // Register IPC handlers
 function registerIpcHandlers() {
   // Test IPC handler
@@ -192,6 +194,19 @@ function registerIpcHandlers() {
         "  process.exit(1);",
         "});",
         "",
+        // Add stdin handler for termination
+        "process.stdin.on('data', (data) => {",
+        "  try {",
+        "    const message = JSON.parse(data.toString());",
+        "    if (message.type === 'terminate') {",
+        "      console.error('[FLOW_ERROR] Terminated by user');",
+        "      process.exit(1);",
+        "    }",
+        "  } catch (e) {",
+        "    // Ignore parsing errors",
+        "  }",
+        "});",
+        "",
         // Wrap the flow execution in a Promise and ensure proper cleanup
         "new Promise(async (resolve, reject) => {",
         "  try {",
@@ -232,6 +247,18 @@ function registerIpcHandlers() {
 
       fs.writeFileSync(tempFile, wrappedCode);
 
+      // Store the child process reference
+      currentFlowProcess = spawn(process.execPath, [tempFile], {
+        stdio: ['ignore', 'pipe', 'ignore'],
+        env: {
+          ...process.env,
+          NODE_PATH: possibleNodeModulesPaths.join(path.delimiter),
+          FORCE_COLOR: '1',
+          DEBUG_COLORS: '1'
+        },
+        shell: true
+      });
+
       return new Promise((resolve, reject) => {
         // Track sent messages to prevent duplicates
         const sentMessages = new Set();
@@ -256,7 +283,14 @@ function registerIpcHandlers() {
                           logData.message;
             
             const cleanMessage = message.trim();
-            // Create a unique key that includes both type and message
+            
+            // Special handling for [FLOW] logs - they should never be considered duplicates
+            if (cleanMessage.startsWith('[FLOW]')) {
+              mainWindow.webContents.send('flow-log', cleanMessage);
+              return;
+            }
+            
+            // For other logs, create a unique key that includes both type and message
             const uniqueKey = `${logData.type}:${cleanMessage}`;
             
             sendDebugLog(`Processing log: ${JSON.stringify({ 
@@ -274,6 +308,13 @@ function registerIpcHandlers() {
           } catch (e) {
             // If the line isn't valid JSON, treat it as a plain message
             const cleanMessage = line.trim();
+            
+            // Special handling for [FLOW] logs - they should never be considered duplicates
+            if (cleanMessage.startsWith('[FLOW]')) {
+              mainWindow.webContents.send('flow-log', cleanMessage);
+              return;
+            }
+            
             const uniqueKey = `plain:${cleanMessage}`;
             
             sendDebugLog(`Processing plain log: ${JSON.stringify({ 
@@ -289,21 +330,8 @@ function registerIpcHandlers() {
           }
         };
 
-        // Spawn a new Node.js process to run the code
-        sendDebugLog('Spawning child process');
-        const child = spawn(process.execPath, [tempFile], {
-          stdio: ['ignore', 'pipe', 'ignore'], // Only use stdout for all logs
-          env: {
-            ...process.env,
-            NODE_PATH: possibleNodeModulesPaths.join(path.delimiter),
-            FORCE_COLOR: '1',
-            DEBUG_COLORS: '1'
-          },
-          shell: true
-        });
-
         // Handle stdout from the child process
-        child.stdout.on('data', (data) => {
+        currentFlowProcess.stdout.on('data', (data) => {
           sendDebugLog(`Received stdout data: ${data.toString()}`);
           // Add new data to buffer
           buffer += data.toString();
@@ -321,7 +349,7 @@ function registerIpcHandlers() {
         });
 
         // Handle any remaining data in buffer when process ends
-        child.on('close', (code) => {
+        currentFlowProcess.on('close', (code) => {
           sendDebugLog(`Child process closed with code: ${code}`);
           if (buffer.trim()) {
             sendLog(buffer);
@@ -340,24 +368,80 @@ function registerIpcHandlers() {
         });
 
         // Handle process events
-        child.on('error', (error) => {
+        currentFlowProcess.on('error', (error) => {
           sendDebugLog(`Child process error: ${error.message}`);
           reject(error);
         });
 
-        child.on('exit', (code, signal) => {
+        currentFlowProcess.on('exit', (code, signal) => {
           sendDebugLog(`Child process exited: ${JSON.stringify({ code, signal })}`);
         });
 
         // Set a timeout
         setTimeout(() => {
           sendDebugLog('Flow execution timed out');
-          child.kill();
+          currentFlowProcess.kill();
           reject(new Error('Flow execution timed out after 5 minutes'));
         }, 300000); // 5 minute timeout
       });
     } catch (error) {
       throw error;
+    }
+  });
+
+  // Add handler to terminate the flow
+  ipcMain.handle('terminate-flow', async () => {
+    if (currentFlowProcess) {
+      try {
+        // Send termination log to the child process
+        currentFlowProcess.stdin.write(JSON.stringify({ type: 'terminate' }) + '\n');
+        
+        // Give a small delay to allow the log to be processed
+        await new Promise(resolve => setTimeout(resolve, 100));
+
+        // Force kill the process and all its children
+        if (process.platform === 'win32') {
+          // On Windows, use taskkill with /F (force) and /T (tree)
+          const { execSync } = require('child_process');
+          try {
+            execSync(`taskkill /pid ${currentFlowProcess.pid} /T /F`);
+          } catch (e) {
+            // Ignore errors if process is already gone
+          }
+        } else {
+          // On Unix-like systems, use SIGKILL (-9) to ensure termination
+          try {
+            // First try to kill the process group
+            process.kill(-currentFlowProcess.pid, 'SIGKILL');
+          } catch (e) {
+            // If that fails, try to kill just the process
+            try {
+              process.kill(currentFlowProcess.pid, 'SIGKILL');
+            } catch (e2) {
+              // Ignore errors if process is already gone
+            }
+          }
+        }
+
+        // Double-check if process is still running and force kill if needed
+        try {
+          process.kill(currentFlowProcess.pid, 0); // This will throw if process doesn't exist
+          // If we get here, process is still running, try one more time
+          if (process.platform === 'win32') {
+            const { execSync } = require('child_process');
+            execSync(`taskkill /pid ${currentFlowProcess.pid} /F`);
+          } else {
+            process.kill(currentFlowProcess.pid, 'SIGKILL');
+          }
+        } catch (e) {
+          // Process is already gone, which is what we want
+        }
+
+        currentFlowProcess = null;
+      } catch (error) {
+        console.error('Error terminating flow:', error);
+        throw error;
+      }
     }
   });
 
@@ -558,6 +642,18 @@ function registerIpcHandlers() {
   // Add IPC handler for opening external links
   ipcMain.handle('open-external-link', async (event, url) => {
     await shell.openExternal(url);
+  });
+
+  // Add handler to open file location
+  ipcMain.handle('open-file-location', async (event, filePath) => {
+    try {
+      // Use shell to open the file's location in the system's file explorer
+      await shell.showItemInFolder(filePath);
+      return true;
+    } catch (error) {
+      console.error('Error opening file location:', error);
+      throw error;
+    }
   });
 }
 
