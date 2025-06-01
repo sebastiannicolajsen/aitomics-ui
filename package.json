@@ -1,6 +1,6 @@
 {
   "name": "aitomics-ui",
-  "version": "1.0.0-beta.17",
+  "version": "1.0.0-beta.18",
   "description": "A local application for managing Aitomics projects with a block-based code editor",
   "main": "main.js",
   "scripts": {
@@ -29,7 +29,7 @@
     "@types/node-fetch": "^2.6.11",
     "concurrently": "^8.2.2",
     "electron": "^28.1.0",
-    "electron-builder": "^24.9.1",
+    "electron-builder": "26.0.12",
     "jest": "^29.7.0",
     "prettier": "^3.5.3",
     "typescript": "^5.8.3",
