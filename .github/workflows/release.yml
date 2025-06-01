@@ -5,6 +5,12 @@ on:
     tags:
       - 'v*'
 
+# Add explicit permissions
+permissions:
+  contents: write  # Required for creating releases and uploading artifacts
+  packages: write  # Required for publishing packages
+  discussions: write  # Required for creating release discussions
+
 jobs:
   release:
     runs-on: ${{ matrix.os }}
@@ -28,13 +34,22 @@ jobs:
           npm ci
           cd src/renderer && npm ci
 
-      - name: Build application
-        run: npm run build
+      - name: Build renderer
+        run: |
+          cd src/renderer
+          npm run build
+
+      - name: Build preload script
+        run: npm run build-preload
 
       - name: Build/Release Electron app
         uses: samuelmeuli/action-electron-builder@v1
         with:
-          github_token: ${{ secrets.github_token }}
+          github_token: ${{ secrets.GITHUB_TOKEN }}
           release: ${{ startsWith(github.ref, 'refs/tags/v') }}
+          artifact_name: Aitomics-UI-${{ matrix.os }}-${{ github.ref_name }}
         env:
-          GH_TOKEN: ${{ secrets.github_token }} 
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          NODE_ENV: production
+          ELECTRON_BUILDER_ALLOW_UNRESOLVED_DEPENDENCIES: true
+          DEBUG: electron-builder 
