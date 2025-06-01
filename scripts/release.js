@@ -2,6 +2,12 @@ const fs = require('fs');
 const { execSync } = require('child_process');
 const path = require('path');
 
+// Check if we're in a CI environment
+if (process.env.CI) {
+  console.log('Running in CI environment, skipping release creation');
+  process.exit(0);
+}
+
 // Read package.json
 const packageJsonPath = path.join(__dirname, '..', 'package.json');
 const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, 'utf8'));
