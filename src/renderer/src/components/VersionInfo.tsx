@@ -12,13 +12,17 @@ import {
   LinearProgress,
   Stack,
   Chip,
+  Link,
 } from '@mui/material';
 import InfoIcon from '@mui/icons-material/Info';
 import UpdateIcon from '@mui/icons-material/Update';
 import CloseIcon from '@mui/icons-material/Close';
 import DownloadIcon from '@mui/icons-material/Download';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
+import LaunchIcon from '@mui/icons-material/Launch';
 import { VersionInfo as VersionInfoType, UpdateInfo, UpdateProgress } from '../types/electron';
+
+const RELEASES_URL = 'https://github.com/sebastiannicolajsen/aitomics-ui/releases';
 
 const VersionInfo: React.FC = () => {
   const [versionInfo, setVersionInfo] = useState<VersionInfoType | null>(null);
@@ -67,6 +71,8 @@ const VersionInfo: React.FC = () => {
     return `${parseFloat((bytes / Math.pow(k, i)).toFixed(2))} ${sizes[i]}`;
   };
 
+  const isBetaVersion = (version: string) => version.includes('-beta.');
+
   return (
     <>
       <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
@@ -85,9 +91,27 @@ const VersionInfo: React.FC = () => {
             <InfoIcon fontSize="small" />
           </IconButton>
         </Tooltip>
-        <Typography variant="caption" sx={{ color: 'text.secondary' }}>
-          v{versionInfo?.appVersion}
-        </Typography>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+          <Typography variant="caption" sx={{ color: 'text.secondary' }}>
+            v{versionInfo?.appVersion}
+          </Typography>
+          {versionInfo?.appVersion && isBetaVersion(versionInfo.appVersion) && (
+            <Chip
+              size="small"
+              label="BETA"
+              sx={{
+                height: '16px',
+                fontSize: '0.65rem',
+                bgcolor: 'warning.main',
+                color: 'white',
+                '& .MuiChip-label': {
+                  px: 0.5,
+                  fontWeight: 600,
+                },
+              }}
+            />
+          )}
+        </Box>
         <Chip
           size="small"
           label={`Aitomics v${versionInfo?.aitomicsVersion}`}
@@ -162,9 +186,27 @@ const VersionInfo: React.FC = () => {
               <Typography variant="subtitle2" color="text.secondary" gutterBottom>
                 Application Version
               </Typography>
-              <Typography variant="body1">
-                {versionInfo?.appVersion}
-              </Typography>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                <Typography variant="body1">
+                  {versionInfo?.appVersion}
+                </Typography>
+                {versionInfo?.appVersion && isBetaVersion(versionInfo.appVersion) && (
+                  <Chip
+                    size="small"
+                    label="BETA"
+                    sx={{
+                      height: '20px',
+                      fontSize: '0.75rem',
+                      bgcolor: 'warning.main',
+                      color: 'white',
+                      '& .MuiChip-label': {
+                        px: 1,
+                        fontWeight: 600,
+                      },
+                    }}
+                  />
+                )}
+              </Box>
             </Box>
             <Box>
               <Typography variant="subtitle2" color="text.secondary" gutterBottom>
@@ -173,6 +215,20 @@ const VersionInfo: React.FC = () => {
               <Typography variant="body1">
                 {versionInfo?.aitomicsVersion}
               </Typography>
+            </Box>
+            <Box>
+              <Button
+                variant="outlined"
+                startIcon={<LaunchIcon />}
+                component={Link}
+                href={RELEASES_URL}
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={() => window.electron?.ipcRenderer.invoke('open-external-link', RELEASES_URL)}
+                sx={{ mt: 1 }}
+              >
+                Download Latest Release
+              </Button>
             </Box>
           </Stack>
         </DialogContent>
