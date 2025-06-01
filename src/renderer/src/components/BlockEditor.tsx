@@ -19,7 +19,7 @@ import ReactFlow, {
   getBezierPath,
 } from 'reactflow';
 import 'reactflow/dist/style.css';
-import { Box, Typography, Button, Stack, Drawer, TextField, IconButton, FormControl, InputLabel, Select, MenuItem, Chip } from '@mui/material';
+import { Box, Typography, Button, Stack, Drawer, TextField, IconButton, FormControl, InputLabel, Select, MenuItem, Chip, List, ListItem, ListItemText, Dialog, DialogTitle, DialogContent, Tooltip } from '@mui/material';
 import { Project, Block, BlockType, Action, ActionConfig } from '../types/Project';
 import { builtInActions } from '../actions/builtInActions';
 import DownloadIcon from '@mui/icons-material/Download';
@@ -298,6 +298,144 @@ const FlowWrapper: React.FC<FlowWrapperProps> = ({
   );
 };
 
+// Add new interfaces for model selection
+interface Model {
+  id: string;
+  object: string;
+  type: string;
+  publisher: string;
+  arch: string;
+  compatibility_type: string;
+  quantization: string;
+  state: string;
+  max_context_length: number;
+  loaded_context_length?: number;
+}
+
+interface ModelSelectionDialogProps {
+  open: boolean;
+  onClose: () => void;
+  models: Model[];
+  selectedModel: string;
+  onSelectModel: (modelId: string) => void;
+}
+
+// Add ModelSelectionDialog component
+const ModelSelectionDialog: React.FC<ModelSelectionDialogProps> = ({
+  open,
+  onClose,
+  models,
+  selectedModel,
+  onSelectModel,
+}) => {
+  return (
+    <Dialog
+      open={open}
+      onClose={onClose}
+      maxWidth="md"
+      fullWidth
+      PaperProps={{
+        sx: {
+          minHeight: '50vh',
+          maxHeight: '80vh',
+          bgcolor: '#ffffff',
+          boxShadow: '0 4px 20px rgba(0, 0, 0, 0.1)',
+        },
+      }}
+    >
+      <DialogTitle sx={{ 
+        borderBottom: '1px solid #e0e0e0',
+        pb: 1.5,
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'center'
+      }}>
+        <Typography variant="h6" sx={{ 
+          fontFamily: 'monospace',
+          fontSize: '1.1rem',
+          color: '#333333'
+        }}>
+          Select Model
+        </Typography>
+        <IconButton
+          onClick={onClose}
+          size="small"
+          sx={{
+            color: '#666666',
+            '&:hover': {
+              color: '#10a37f',
+              bgcolor: 'rgba(16, 163, 127, 0.1)',
+            },
+          }}
+        >
+          <CloseIcon />
+        </IconButton>
+      </DialogTitle>
+      <DialogContent sx={{ 
+        p: 3,
+        '&.MuiDialogContent-root': {
+          pt: 2
+        }
+      }}>
+        <List sx={{ width: '100%' }}>
+          {models.map((model) => (
+            <ListItem
+              key={model.id}
+              button
+              selected={model.id === selectedModel}
+              onClick={() => {
+                onSelectModel(model.id);
+                onClose();
+              }}
+              sx={{
+                mb: 1,
+                borderRadius: 1,
+                border: '1px solid',
+                borderColor: model.id === selectedModel ? '#673ab7' : 'divider',
+                bgcolor: model.id === selectedModel ? 'rgba(103, 58, 183, 0.08)' : 'background.paper',
+                '&:hover': {
+                  bgcolor: model.id === selectedModel ? 'rgba(103, 58, 183, 0.12)' : 'rgba(0, 0, 0, 0.04)',
+                },
+              }}
+            >
+              <ListItemText
+                primary={
+                  <Typography variant="subtitle1" sx={{ fontWeight: 500 }}>
+                    {model.id}
+                  </Typography>
+                }
+                secondary={
+                  <Stack direction="row" spacing={2} sx={{ mt: 0.5 }}>
+                    <Chip
+                      size="small"
+                      label={model.type}
+                      sx={{
+                        bgcolor: model.type === 'llm' ? '#10a37f20' : '#673ab720',
+                        color: model.type === 'llm' ? '#10a37f' : '#673ab7',
+                      }}
+                    />
+                    <Chip
+                      size="small"
+                      label={model.state}
+                      sx={{
+                        bgcolor: model.state === 'loaded' ? '#10a37f20' : '#ffc10720',
+                        color: model.state === 'loaded' ? '#10a37f' : '#ffc107',
+                      }}
+                    />
+                    <Typography variant="body2" color="text.secondary">
+                      {model.publisher} • {model.quantization}
+                    </Typography>
+                  </Stack>
+                }
+              />
+            </ListItem>
+          ))}
+        </List>
+      </DialogContent>
+    </Dialog>
+  );
+};
+
 const BlockEditor: React.FC<BlockEditorProps> = ({ 
   project, 
   onUpdateProject, 
@@ -323,6 +461,12 @@ const BlockEditor: React.FC<BlockEditorProps> = ({
   const [llmTemperature, setLlmTemperature] = useState(0.7);
   const [llmMaxTokens, setLlmMaxTokens] = useState(-1);
   const [generatedCode, setGeneratedCode] = useState('');
+
+  // Add new state variables for model selection
+  const [availableModels, setAvailableModels] = useState<Model[]>([]);
+  const [isModelDialogOpen, setIsModelDialogOpen] = useState(false);
+  const [isLmStudioRunning, setIsLmStudioRunning] = useState(true);
+  const [isLoadingModels, setIsLoadingModels] = useState(false);
 
   // Use external drag state if provided
   const effectiveIsDraggingAction = externalIsDraggingAction ?? isDraggingAction;
@@ -1730,6 +1874,12 @@ const BlockEditor: React.FC<BlockEditorProps> = ({
   }, [project, globalActions, executionMode, customCount, llmModel, llmTemperature, llmMaxTokens]);
 
   const handleRunFlow = useCallback(() => {
+    if (!isLmStudioRunning) {
+      // Show error message
+      window.alert('LM Studio is not running. Please start LM Studio and try again.');
+      return;
+    }
+
     const code = generateFlowCode(
       project, 
       globalActions, 
@@ -1743,7 +1893,7 @@ const BlockEditor: React.FC<BlockEditorProps> = ({
     setIsRunDrawerOpen(false);
     setShowExecutionWindow(true);
     setGeneratedCode(code);
-  }, [project, globalActions, executionMode, customCount, llmModel, llmTemperature, llmMaxTokens]);
+  }, [project, globalActions, executionMode, customCount, llmModel, llmTemperature, llmMaxTokens, isLmStudioRunning]);
 
   // Add debounced update functions
   const debouncedUpdateNodeName = useCallback(
@@ -1827,6 +1977,37 @@ const BlockEditor: React.FC<BlockEditorProps> = ({
     }, 500),
     [selectedNode, project, onUpdateProject, setNodes]
   );
+
+  // Add function to fetch models
+  const fetchModels = useCallback(async () => {
+    setIsLoadingModels(true);
+    try {
+      if (!window.electron) {
+        throw new Error('Electron is not available');
+      }
+      
+      const response = await window.electron.ipcRenderer.invoke('fetch-lm-studio-models');
+      if (!response.success) {
+        throw new Error(response.error || 'Failed to fetch models');
+      }
+      
+      setAvailableModels(response.data || []);
+      setIsLmStudioRunning(true);
+    } catch (error) {
+      console.error('Error fetching models:', error);
+      setAvailableModels([]);
+      setIsLmStudioRunning(false);
+    } finally {
+      setIsLoadingModels(false);
+    }
+  }, []);
+
+  // Fetch models when Run drawer opens
+  useEffect(() => {
+    if (isRunDrawerOpen) {
+      fetchModels();
+    }
+  }, [isRunDrawerOpen, fetchModels]);
 
   // Update the drawer content
   return (
@@ -2410,7 +2591,7 @@ const BlockEditor: React.FC<BlockEditorProps> = ({
             <Stack spacing={3}>
               {/* Input Files Section */}
               <Box>
-                <Typography variant="subtitle1" sx={{ mb: 2, color: '#10a37f', fontWeight: 500 }}>
+                <Typography variant="subtitle1" sx={{ mb: 2, color: '#7D6E63', fontWeight: 500 }}>
                   Input Files
                 </Typography>
                 {project.blocks
@@ -2422,13 +2603,20 @@ const BlockEditor: React.FC<BlockEditorProps> = ({
                         p: 2,
                         mb: 1,
                         borderRadius: 1,
-                        background: 'linear-gradient(145deg, #e6f7f1 0%, #d1f0e6 100%)',
-                        border: '1px solid rgba(16, 163, 127, 0.2)',
+                        background: 'linear-gradient(145deg, #f7f5f3 0%, #eae6e3 100%)',
+                        border: '1px solid rgba(125, 110, 99, 0.2)',
                       }}
                     >
                       <Stack direction="row" spacing={1} alignItems="center">
-                        <UploadIcon sx={{ color: '#10a37f' }} />
-                        <Typography variant="body2" sx={{ color: '#10a37f' }}>
+                        <UploadIcon sx={{ color: '#7D6E63' }} />
+                        <Typography 
+                          variant="body2" 
+                          sx={{ 
+                            color: '#7D6E63',
+                            wordBreak: 'break-all',
+                            whiteSpace: 'normal'
+                          }}
+                        >
                           {block.file}
                         </Typography>
                       </Stack>
@@ -2443,7 +2631,7 @@ const BlockEditor: React.FC<BlockEditorProps> = ({
 
               {/* Output Files Section */}
               <Box>
-                <Typography variant="subtitle1" sx={{ mb: 2, color: '#dc3545', fontWeight: 500 }}>
+                <Typography variant="subtitle1" sx={{ mb: 2, color: '#5C6B73', fontWeight: 500 }}>
                   Output Files
                 </Typography>
                 {project.blocks
@@ -2455,13 +2643,20 @@ const BlockEditor: React.FC<BlockEditorProps> = ({
                         p: 2,
                         mb: 1,
                         borderRadius: 1,
-                        background: 'linear-gradient(145deg, #f7e6e6 0%, #f0d1d1 100%)',
-                        border: '1px solid rgba(220, 53, 69, 0.2)',
+                        background: 'linear-gradient(145deg, #f3f5f7 0%, #e3e6ea 100%)',
+                        border: '1px solid rgba(92, 107, 115, 0.2)',
                       }}
                     >
                       <Stack direction="row" spacing={1} alignItems="center">
-                        <DownloadIcon sx={{ color: '#dc3545' }} />
-                        <Typography variant="body2" sx={{ color: '#dc3545' }}>
+                        <DownloadIcon sx={{ color: '#5C6B73' }} />
+                        <Typography 
+                          variant="body2" 
+                          sx={{ 
+                            color: '#5C6B73',
+                            wordBreak: 'break-all',
+                            whiteSpace: 'normal'
+                          }}
+                        >
                           {block.outputFilename || 'output'} → {block.outputPath}
                         </Typography>
                       </Stack>
@@ -2512,14 +2707,39 @@ const BlockEditor: React.FC<BlockEditorProps> = ({
                 <Typography variant="subtitle1" sx={{ mb: 2, color: '#673ab7', fontWeight: 500 }}>
                   LLM Configuration
                 </Typography>
-                <TextField
-                  fullWidth
-                  label="Model Name"
-                  value={llmModel}
-                  onChange={(e) => setLlmModel(e.target.value)}
-                  sx={{ mb: 2 }}
-                  helperText="Enter the name of the LLM model to use"
-                />
+                <Box
+                  onClick={() => setIsModelDialogOpen(true)}
+                  sx={{
+                    p: 2,
+                    mb: 2,
+                    borderRadius: 1,
+                    border: '1px solid',
+                    borderColor: isLmStudioRunning ? 'divider' : '#dc3545',
+                    bgcolor: 'background.paper',
+                    cursor: 'pointer',
+                    '&:hover': {
+                      bgcolor: 'rgba(0, 0, 0, 0.04)',
+                    },
+                  }}
+                >
+                  <Stack direction="row" spacing={1} alignItems="center">
+                    <Typography variant="body2" color={isLmStudioRunning ? 'text.primary' : 'error'}>
+                      {isLoadingModels ? 'Loading models...' : 
+                       !isLmStudioRunning ? 'LM Studio is not running' :
+                       availableModels.find(m => m.id === llmModel)?.id || 'Select a model'}
+                    </Typography>
+                    {isLmStudioRunning && (
+                      <Chip
+                        size="small"
+                        label={availableModels.find(m => m.id === llmModel)?.state || 'unknown'}
+                        sx={{
+                          bgcolor: availableModels.find(m => m.id === llmModel)?.state === 'loaded' ? '#10a37f20' : '#ffc10720',
+                          color: availableModels.find(m => m.id === llmModel)?.state === 'loaded' ? '#10a37f' : '#ffc107',
+                        }}
+                      />
+                    )}
+                  </Stack>
+                </Box>
                 <TextField
                   fullWidth
                   label="Temperature"
@@ -2542,6 +2762,15 @@ const BlockEditor: React.FC<BlockEditorProps> = ({
                 />
               </Box>
 
+              {/* Model Selection Dialog */}
+              <ModelSelectionDialog
+                open={isModelDialogOpen}
+                onClose={() => setIsModelDialogOpen(false)}
+                models={availableModels}
+                selectedModel={llmModel}
+                onSelectModel={setLlmModel}
+              />
+
               {/* Preview Code Button */}
               <Button
                 variant="outlined"
@@ -2562,23 +2791,40 @@ const BlockEditor: React.FC<BlockEditorProps> = ({
               </Button>
 
               {/* Run Button */}
-              <Button
-                variant="contained"
-                fullWidth
-                startIcon={<PlayArrowIcon />}
-                onClick={handleRunFlow}
-                sx={{
-                  mt: 2,
-                  background: 'linear-gradient(145deg, #10a37f 0%, #0d8c6d 100%)',
-                  boxShadow: '0 4px 12px rgba(16, 163, 127, 0.2)',
-                  '&:hover': {
-                    background: 'linear-gradient(145deg, #0d8c6d 0%, #0b7a5d 100%)',
-                    boxShadow: '0 6px 16px rgba(16, 163, 127, 0.25)',
-                  },
-                }}
+              <Tooltip 
+                title={!isLmStudioRunning ? "LM Studio is not running or developer mode is not enabled. Please start LM Studio and enable developer mode (Developer tab > Run) to run the flow." : ""}
+                placement="top"
               >
-                Run Flow
-              </Button>
+                <span>
+                  <Button
+                    variant="contained"
+                    fullWidth
+                    startIcon={<PlayArrowIcon />}
+                    onClick={handleRunFlow}
+                    disabled={!isLmStudioRunning}
+                    sx={{
+                      mt: 2,
+                      ...(isLmStudioRunning ? {
+                        background: 'linear-gradient(145deg, #10a37f 0%, #0d8c6d 100%)',
+                        boxShadow: '0 4px 12px rgba(16, 163, 127, 0.2)',
+                        '&:hover': {
+                          background: 'linear-gradient(145deg, #0d8c6d 0%, #0b7a5d 100%)',
+                          boxShadow: '0 6px 16px rgba(16, 163, 127, 0.25)',
+                        },
+                      } : {
+                        background: 'linear-gradient(145deg, #e0e0e0 0%, #d0d0d0 100%)',
+                        boxShadow: 'none',
+                      }),
+                      '&.Mui-disabled': {
+                        background: 'linear-gradient(145deg, #e0e0e0 0%, #d0d0d0 100%)',
+                        color: 'rgba(0, 0, 0, 0.38)',
+                      },
+                    }}
+                  >
+                    Run Flow
+                  </Button>
+                </span>
+              </Tooltip>
             </Stack>
           </Drawer>
         </>

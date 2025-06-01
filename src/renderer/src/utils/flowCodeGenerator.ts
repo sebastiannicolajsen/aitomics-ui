@@ -442,7 +442,7 @@ async function executeFlow() {
     const caller = callers[callerId];
     if (!caller) {
       console.warn('[FLOW_ERROR] No caller found for node:', nodeName);
-      return input;
+      return input;  // Return input unchanged if no caller found
     }
     try {
       return await caller.run(input);
@@ -451,7 +451,12 @@ async function executeFlow() {
         node: nodeName,
         error: error.message
       });
-      throw error;
+      // Instead of throwing, return a special error response
+      return AitomicsResponse.create({
+        error: true,
+        errorMessage: error.message,
+        originalInput: input.output
+      }, input.output, nodeName);
     }
   }
 
@@ -499,53 +504,65 @@ async function executeFlow() {
     
     console.log('[FLOW] Processing ' + itemsToProcess.length + ' items from ${JSON.stringify(block.name || block.id)}');
     
+    // Add divider after flow message
+    if (UI_LOGGING) {
+      console.log('[FLOW_UI_LOG] ' + JSON.stringify({
+        type: 'divider',
+        nodeName: ${JSON.stringify(block.name || block.id)},
+        dividerType: 'flow_start'
+      }));
+    }
+    
     // Create a map for this import node's results
     const nodeResults = [];
     results.set(${JSON.stringify(block.id)}, nodeResults);
     
     for (let i = 0; i < itemsToProcess.length; i++) {
       const item = itemsToProcess[i];
-      try {
-        // Log UI item update at the start of each iteration
+      // Log UI item update at the start of each iteration
+      if (UI_LOGGING) {
+        console.log('[FLOW_UI_LOG] ' + JSON.stringify({
+          type: 'item_update',
+          nodeId: ${JSON.stringify(block.id)},
+          nodeName: ${JSON.stringify(block.name || block.id)},
+          current: i + 1,
+          total: itemsToProcess.length
+        }));
+      }
+
+      console.log('[FLOW] Processing item ' + (i + 1) + '/' + itemsToProcess.length + ' from ${JSON.stringify(block.name || block.id)}');
+      let result = item;
+      let transformInput; // Declare once outside the transform loop
+      
+      // First run the import action if it exists
+      const importCaller = callers[${JSON.stringify(block.id)}];
+      if (importCaller) {
+        const importInput = result;
+        const importTime = new Date();
+        console.log('[FLOW] conducting import: ${JSON.stringify(block.name || block.id)} (' + importTime.toISOString().slice(11, 23) + ')');
+        result = await runCaller(${JSON.stringify(block.id)}, result, ${JSON.stringify(block.name || block.id)});
+        
+        // Log UI import if enabled
         if (UI_LOGGING) {
           console.log('[FLOW_UI_LOG] ' + JSON.stringify({
-            type: 'item_update',
+            type: 'import',
             nodeId: ${JSON.stringify(block.id)},
             nodeName: ${JSON.stringify(block.name || block.id)},
-            current: i + 1,
-            total: itemsToProcess.length
+            input: importInput.output,
+            output: result.output,
+            error: result.error || undefined,
+            errorMessage: result.errorMessage || undefined
           }));
         }
-
-        console.log('[FLOW] Processing item ' + (i + 1) + '/' + itemsToProcess.length + ' from ${JSON.stringify(block.name || block.id)}');
-        let result = item;
-        let transformInput; // Declare once outside the transform loop
-        
-        // First run the import action if it exists
-        const importCaller = callers[${JSON.stringify(block.id)}];
-        if (importCaller) {
-          const importInput = result;
-          const importTime = new Date();
-          console.log('[FLOW] conducting import: ${JSON.stringify(block.name || block.id)} (' + importTime.toISOString().slice(11, 23) + ')');
-          result = await runCaller(${JSON.stringify(block.id)}, result, ${JSON.stringify(block.name || block.id)});
-          
-          // Log UI import if enabled
-          if (UI_LOGGING) {
-            console.log('[FLOW_UI_LOG] ' + JSON.stringify({
-              type: 'import',
-              nodeId: ${JSON.stringify(block.id)},
-              nodeName: ${JSON.stringify(block.name || block.id)},
-              input: importInput.output,
-              output: result.output
-            }));
-          }
-        }
-        
-        // Run all transforms in sequence if there are any
-        ${callSequence.length > 0 ? callSequence.map((transformBlock, index) => `
-        // Store the input before transformation
-        transformInput = result;
-        
+      }
+      
+      // Run all transforms in sequence if there are any
+      ${callSequence.length > 0 ? callSequence.map((transformBlock, index) => `
+      // Store the input before transformation
+      transformInput = result;
+      
+      // Skip further transforms if we have an error
+      if (!transformInput.error) {
         // Run the transform and store result
         const time_${transformBlock.id.replace(/[^a-zA-Z0-9]/g, '_')} = new Date();
         console.log('[FLOW] conducting transformation: ${JSON.stringify(transformBlock.name || transformBlock.id)} (' + time_${transformBlock.id.replace(/[^a-zA-Z0-9]/g, '_')}.toISOString().slice(11, 23) + ')');
@@ -558,28 +575,46 @@ async function executeFlow() {
             nodeId: ${JSON.stringify(transformBlock.id)},
             nodeName: ${JSON.stringify(transformBlock.name || transformBlock.id)},
             input: transformInput.output,
-            output: result.output
+            output: result.output,
+            error: result.error || undefined,
+            errorMessage: result.errorMessage || undefined
           }));
         }
-        
-        // Store the transform result under its own ID
-        if (!results.has(${JSON.stringify(transformBlock.id)})) {
-          results.set(${JSON.stringify(transformBlock.id)}, []);
-        }
-        results.get(${JSON.stringify(transformBlock.id)}).push(result);`).join('\n') : '// No transforms to run'}
-        
-        // Store the final result under the import node's ID
-        nodeResults.push(result);
-      } catch (error) {
-        console.error('[FLOW_ERROR] Error processing item ' + (i + 1) + '/' + itemsToProcess.length + ':', {
-          node: ${JSON.stringify(block.name || block.id)},
-          error: error.message
-        });
+      } else {
+        // Propagate the error to the next step
+        result = transformInput;
+      }
+      
+      // Store the transform result under its own ID
+      if (!results.has(${JSON.stringify(transformBlock.id)})) {
+        results.set(${JSON.stringify(transformBlock.id)}, []);
+      }
+      results.get(${JSON.stringify(transformBlock.id)}).push(result);`).join('\n') : '// No transforms to run'}
+      
+      // Store the final result under the import node's ID
+      nodeResults.push(result);
+
+      // Add divider after completing the item processing
+      if (UI_LOGGING) {
+        console.log('[FLOW_UI_LOG] ' + JSON.stringify({
+          type: 'divider',
+          nodeName: ${JSON.stringify(block.name || block.id)},
+          dividerType: 'item_complete',
+          itemIndex: i
+        }));
       }
     }
   }`;
     }).join('\n\n');
   })()}
+
+  // Add stop divider after all transforms are done but before comparisons start
+  if (UI_LOGGING) {
+    console.log('[FLOW_UI_LOG] ' + JSON.stringify({
+      type: 'stop_divider',
+      nodeName: 'Workflow Complete'
+    }));
+  }
 
   // Run all comparisons after all transforms are done
   ${(() => {
@@ -730,7 +765,8 @@ async function executeFlow() {
   }`;
   })()}
 
-  return { results, comparisonResults };
+  // Return the final results
+  return results;
 }
 
 // Store the flow execution promise in a variable that can be awaited

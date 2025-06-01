@@ -749,9 +749,34 @@ function registerIpcHandlers() {
 }
 
 function createWindow() {
+  // Get absolute paths for both possible icon locations
+  const rendererIconPath = path.join(__dirname, 'src/renderer/public/logo512.png');
+  const buildIconPath = path.join(__dirname, 'build/icon.icns');
+  
+  console.log('Possible icon paths:', {
+    renderer: {
+      path: rendererIconPath,
+      exists: fs.existsSync(rendererIconPath)
+    },
+    build: {
+      path: buildIconPath,
+      exists: fs.existsSync(buildIconPath)
+    },
+    __dirname: __dirname,
+    cwd: process.cwd()
+  });
+  
+  // Try to use the renderer icon first, fall back to build icon
+  const iconPath = fs.existsSync(rendererIconPath) ? rendererIconPath : 
+                  fs.existsSync(buildIconPath) ? buildIconPath : undefined;
+  
+  console.log('Selected icon path:', iconPath);
+  
   mainWindow = new BrowserWindow({
     width: 1200,
     height: 800,
+    title: 'Aitomics UI',
+    icon: iconPath,
     webPreferences: {
       nodeIntegration: true,
       contextIsolation: true,

@@ -21,6 +21,8 @@ import SaveIcon from '@mui/icons-material/Save';
 import CloseIcon from '@mui/icons-material/Close';
 import BugReportIcon from '@mui/icons-material/BugReport';
 import CompareArrowsIcon from '@mui/icons-material/CompareArrows';
+import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
+import ExpandLessIcon from '@mui/icons-material/ExpandLess';
 import { Project, Block, Edge } from '../types/Project';
 import type { ElectronAPI } from '../types/electron';
 
@@ -66,7 +68,7 @@ interface ExecutionState {
 
 // Update LogData interface
 interface LogData {
-  type: 'transform' | 'input' | 'import' | 'item_update' | 'additional_file' | 'comparison_in_log' | 'export';
+  type: 'transform' | 'input' | 'import' | 'item_update' | 'additional_file' | 'comparison_in_log' | 'export' | 'divider' | 'stop_divider';
   nodeId?: string;
   nodeName: string;
   actionName?: string;
@@ -80,8 +82,11 @@ interface LogData {
   comparisonResult?: string;
   list1Size?: number;
   list2Size?: number;
-  outputPath?: string;  // Add for export type
-  outputFilename?: string;  // Add for export type
+  outputPath?: string;
+  outputFilename?: string;
+  error?: boolean;
+  errorMessage?: string;
+  itemIndex?: number;
 }
 
 // Update InspectionDialogProps interface
@@ -401,7 +406,7 @@ const InspectionDialog = ({ log, onClose }: { log: LogData; onClose: () => void 
   );
 };
 
-// Update SegmentedProgressBar component to show errors
+// Update SegmentedProgressBar component to use darker gray for completed states
 const SegmentedProgressBar: React.FC<{ flows: FlowProgress[] }> = ({ flows }) => {
   if (flows.length === 0) {
     return (
@@ -459,7 +464,7 @@ const SegmentedProgressBar: React.FC<{ flows: FlowProgress[] }> = ({ flows }) =>
                 flex: 1,
                 position: 'relative',
                 height: '100%',
-                bgcolor: flow.hasError ? '#dc3545' : flow.completed ? '#10a37f' : '#e0e0e0',
+                bgcolor: flow.hasError ? '#dc3545' : flow.completed ? '#1a1a1a' : '#e0e0e0',
                 transition: 'background-color 0.3s ease',
                 '&::after': {
                   content: '""',
@@ -469,7 +474,7 @@ const SegmentedProgressBar: React.FC<{ flows: FlowProgress[] }> = ({ flows }) =>
                   right: 0,
                   bottom: 0,
                   background: flow.hasError ? 'none' : flow.completed ? 'none' : 
-                    `linear-gradient(90deg, ${flow.hasError ? '#dc3545' : '#10a37f'} ${flow.progress}%, transparent ${flow.progress}%)`,
+                    `linear-gradient(90deg, ${flow.hasError ? '#dc3545' : '#333333'} ${flow.progress}%, transparent ${flow.progress}%)`,
                   transition: 'background 0.3s ease',
                 }
               }}
@@ -490,38 +495,60 @@ const SegmentedProgressBar: React.FC<{ flows: FlowProgress[] }> = ({ flows }) =>
         ))}
       </Box>
 
-      {/* Flow labels */}
+      {/* Flow labels - Updated to use darker gray for completed states */}
       <Box sx={{ 
         display: 'flex', 
-        justifyContent: 'space-between',
         mt: 0.5,
-        px: 0.5
+        px: 0.5,
+        position: 'relative',
+        height: '20px'  // Fixed height for labels
       }}>
-        {flows.map((flow) => (
-          <Tooltip 
-            key={flow.name} 
-            title={`${flow.name}: ${flow.progress}%${flow.hasError ? ' (error)' : flow.completed ? ' (completed)' : ''}`}
-            placement="top"
-          >
-            <Typography
-              variant="caption"
-              sx={{
-                color: flow.hasError ? '#dc3545' : flow.completed ? '#10a37f' : '#666666',
-                fontWeight: flow.hasError || flow.completed ? 500 : 400,
-                fontSize: '0.75rem',
-                maxWidth: `${100 / flows.length}%`,
-                overflow: 'hidden',
-                textOverflow: 'ellipsis',
-                whiteSpace: 'nowrap',
-                textAlign: 'center',
-                transition: 'color 0.3s ease',
-                px: 0.5
-              }}
+        {flows.map((flow, index) => {
+          // Calculate the position and width for each label
+          const segmentWidth = 100 / flows.length;
+          const leftPosition = (index * segmentWidth);
+          
+          // Determine if this flow has an error
+          const hasError = flow.hasError;
+          
+          return (
+            <Tooltip 
+              key={flow.name} 
+              title={`${flow.name}: ${flow.progress}%${hasError ? ' (error)' : flow.completed ? ' (completed)' : ''}`}
+              placement="top"
             >
-              {flow.name}
-            </Typography>
-          </Tooltip>
-        ))}
+              <Typography
+                variant="caption"
+                sx={{
+                  position: 'absolute',
+                  left: `${leftPosition}%`,
+                  width: `${segmentWidth}%`,
+                  color: hasError ? '#dc3545' : flow.completed ? '#1a1a1a' : '#333333',
+                  fontWeight: hasError || flow.completed ? 500 : 400,
+                  fontSize: '0.75rem',
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                  whiteSpace: 'nowrap',
+                  textAlign: 'left',
+                  transition: 'color 0.3s ease',
+                  px: 0.5,
+                  pl: 1,  // Add left padding to align with segment start
+                  // Add error styling
+                  ...(hasError && {
+                    color: '#dc3545',
+                    fontWeight: 500,
+                    '&::before': {
+                      content: '"⚠️ "',
+                      marginRight: '2px'
+                    }
+                  })
+                }}
+              >
+                {flow.name}
+              </Typography>
+            </Tooltip>
+          );
+        })}
       </Box>
     </Box>
   );
@@ -637,6 +664,19 @@ const ErrorDialog = ({ error, onClose }: { error: { description: string; details
   );
 };
 
+// Add after the ExecutionState interface
+interface DividerState {
+  index: number;
+  isCollapsed: boolean;
+  nodeName: string;  // Add nodeName to uniquely identify dividers
+}
+
+// Add after the DividerState interface
+interface DividerRef {
+  index: number;
+  element: HTMLDivElement;
+}
+
 const FlowExecutionWindow: React.FC<FlowExecutionWindowProps> = ({ project, onClose, llmConfig, generatedCode }) => {
   const [executionState, setExecutionState] = useState<ExecutionState>({
     status: 'idle',
@@ -666,6 +706,88 @@ const FlowExecutionWindow: React.FC<FlowExecutionWindowProps> = ({ project, onCl
 
   // Add a ref to track if flow has been executed
   const hasExecuted = useRef(false);
+
+  // Add inside FlowExecutionWindow component, after other state declarations
+  const [dividerStates, setDividerStates] = useState<DividerState[]>([]);
+  const dividerRefs = useRef<Map<number, HTMLDivElement>>(new Map());
+  const observerRef = useRef<IntersectionObserver | null>(null);
+
+  // Add state for current divider
+  const [currentDividerIndex, setCurrentDividerIndex] = useState<number | null>(null);
+
+  // Load divider states from localStorage on mount
+  useEffect(() => {
+    const savedStates = localStorage.getItem(`dividerStates-${project.id}`);
+    if (savedStates) {
+      try {
+        const parsedStates = JSON.parse(savedStates) as DividerState[];
+        // Ensure all states are collapsed by default
+        const collapsedStates = parsedStates.map(state => ({
+          ...state,
+          isCollapsed: true
+        }));
+        setDividerStates(collapsedStates);
+      } catch (e) {
+        console.error('Failed to parse saved divider states:', e);
+        // Initialize with empty array if parsing fails
+        setDividerStates([]);
+      }
+    } else {
+      // Initialize with empty array if no saved states
+      setDividerStates([]);
+    }
+  }, [project.id]);
+
+  // Effect to manage divider states
+  useEffect(() => {
+    // Find all divider indices, excluding stop dividers
+    const dividerIndices = executionState.logs
+      .map((log, index) => typeof log === 'object' && log.type === 'divider' ? index : -1)
+      .filter(index => index !== -1);
+
+    // Update divider states
+    setDividerStates((prevStates: DividerState[]) => {
+      // Force all existing states to be collapsed
+      const existingStates = prevStates
+        .filter(state => dividerIndices.includes(state.index))
+        .map(state => ({
+          ...state,
+          nodeName: (executionState.logs[state.index] as LogData).nodeName,
+          isCollapsed: true  // Force collapse all existing states
+        }));
+
+      // Add new states for new dividers, all collapsed
+      const newStates: DividerState[] = dividerIndices
+        .filter(index => !existingStates.some(state => state.index === index))
+        .map((index) => ({
+          index,
+          nodeName: (executionState.logs[index] as LogData).nodeName,
+          isCollapsed: true  // Force all new states to be collapsed
+        }));
+
+      // Combine states, ensuring everything is collapsed
+      return [...existingStates, ...newStates].map(state => ({
+        ...state,
+        isCollapsed: true  // One final check to ensure everything is collapsed
+      }));
+    });
+  }, [executionState.logs]);
+
+  // Save divider states to localStorage whenever they change
+  useEffect(() => {
+    localStorage.setItem(`dividerStates-${project.id}`, JSON.stringify(dividerStates));
+  }, [dividerStates, project.id]);
+
+  // Update current divider index when new logs arrive
+  useEffect(() => {
+    const dividerIndices = executionState.logs
+      .map((log, i) => typeof log === 'object' && log.type === 'divider' ? i : -1)
+      .filter(i => i !== -1);
+
+    if (dividerIndices.length > 0) {
+      setCurrentDividerIndex(dividerIndices[dividerIndices.length - 1]);
+    }
+  }, [executionState.logs]);
 
   // Reset counters when component mounts or project changes
   useEffect(() => {
@@ -740,11 +862,110 @@ const FlowExecutionWindow: React.FC<FlowExecutionWindowProps> = ({ project, onCl
           return;
         }
 
-        // Handle UI logs
+        // Handle FLOW_UI_LOG messages
         if (log.includes('[FLOW_UI_LOG]')) {
           try {
             const logData = JSON.parse(log.replace('[FLOW_UI_LOG]', '').trim()) as LogData;
             
+            // Handle divider logs
+            if (logData.type === 'divider' || logData.type === 'stop_divider') {
+              // Create a unique key for the divider using nodeName and itemIndex
+              const dividerKey = `divider:${logData.nodeName}:${logData.itemIndex ?? 'flow_start'}`;
+              
+              // Only add the divider if we haven't seen this key before
+              if (!seenMessagesRef.current.has(dividerKey)) {
+                seenMessagesRef.current.add(dividerKey);
+                setExecutionState(prev => ({
+                  ...prev,
+                  logs: [...prev.logs, logData]
+                }));
+              }
+              return;
+            }
+
+            // Handle errors in flow progress
+            if (logData.error || logData.errorMessage) {
+              // When we get an error, mark the entire import node as having an error
+              setExecutionState(prev => {
+                const flowProgress = [...prev.flowProgress];
+                // Find the import node that this error belongs to
+                const importNodeIndex = flowProgress.findIndex(f => {
+                  // For import nodes, match directly
+                  if (f.name === logData.nodeName) return true;
+                  // For transform nodes, find their parent import node
+                  const isTransform = logData.type === 'transform';
+                  if (isTransform) {
+                    // Store the error node ID outside the function to avoid undefined issues
+                    const errorNodeId = logData.nodeId;
+                    
+                    // Find the import node that this transform belongs to
+                    const importNode = project.blocks.find(b => 
+                      b.type === 'import' && 
+                      project.edges.some(e => {
+                        // Check if there's a path from import to this transform
+                        const visited = new Set<string>();
+                        function hasPathToTransform(currentId: string): boolean {
+                          if (visited.has(currentId)) return false;
+                          visited.add(currentId);
+                          if (currentId === errorNodeId) return true;
+                          const edges = project.edges.filter(e => e.source === currentId);
+                          return edges.some(e => hasPathToTransform(e.target));
+                        }
+                        return e.source === b.id && hasPathToTransform(e.target);
+                      })
+                    );
+                    return importNode && f.name === importNode.name;
+                  }
+                  return false;
+                });
+
+                if (importNodeIndex !== -1) {
+                  // Mark the entire import node as having an error and completed
+                  flowProgress[importNodeIndex] = {
+                    ...flowProgress[importNodeIndex],
+                    hasError: true,
+                    completed: true,  // Mark as completed since it errored
+                    progress: 100  // Set progress to 100 to ensure it's fully red
+                  };
+                }
+                return {
+                  ...prev,
+                  flowProgress,
+                  // Also update the overall execution state if we have an error
+                  status: 'error',
+                  error: logData.errorMessage || 'An error occurred during flow execution'
+                };
+              });
+            }
+
+            // Handle item_update logs to update flow progress
+            if (logData.type === 'item_update') {
+              const progress = Math.round((logData.current! / logData.total!) * 100);
+              setExecutionState(prev => {
+                const flowProgress = [...prev.flowProgress];
+                const flowIndex = flowProgress.findIndex(f => f.name === logData.nodeName);
+                
+                if (flowIndex !== -1) {
+                  // Only update progress if we don't already have an error
+                  if (!flowProgress[flowIndex].hasError) {
+                    flowProgress[flowIndex] = {
+                      ...flowProgress[flowIndex],
+                      progress: progress,
+                      completed: progress === 100
+                    };
+                  }
+                }
+
+                return {
+                  ...prev,
+                  itemProgress: progress,
+                  currentStep: logData.nodeName,
+                  flowProgress
+                };
+              });
+              return;
+            }
+
             // Handle comparison_in_log
             if (logData.type === 'comparison_in_log') {
               setExecutionState(prev => ({
@@ -788,32 +1009,6 @@ const FlowExecutionWindow: React.FC<FlowExecutionWindowProps> = ({ project, onCl
                   };
                 });
               }
-              return;
-            }
-
-            // Handle item_update logs to update flow progress
-            if (logData.type === 'item_update') {
-              const progress = Math.round((logData.current! / logData.total!) * 100);
-              setExecutionState(prev => {
-                const flowProgress = [...prev.flowProgress];
-                const flowIndex = flowProgress.findIndex(f => f.name === logData.nodeName);
-                
-                if (flowIndex !== -1) {
-                  // Update existing flow progress
-                  flowProgress[flowIndex] = {
-                    ...flowProgress[flowIndex],
-                    progress: progress,
-                    completed: progress === 100
-                  };
-                }
-
-                return {
-                  ...prev,
-                  itemProgress: progress,
-                  currentStep: logData.nodeName,
-                  flowProgress
-                };
-              });
               return;
             }
 
@@ -865,7 +1060,12 @@ const FlowExecutionWindow: React.FC<FlowExecutionWindowProps> = ({ project, onCl
               return;
             }
 
-            // Handle errors in flow progress
+            // Handle regular logs
+            if (typeof log !== 'string' || !log.trim()) {
+              return;
+            }
+
+            // Handle FLOW_ERROR logs specifically
             if (log.includes('[FLOW_ERROR]')) {
               const errorMatch = log.match(/\[FLOW_ERROR\](.*?)(\{[\s\S]*\})$/);
               if (errorMatch) {
@@ -874,35 +1074,81 @@ const FlowExecutionWindow: React.FC<FlowExecutionWindowProps> = ({ project, onCl
                   const details = JSON.parse(jsonStr);
                   // Try to find the node name from various possible locations in the error details
                   let nodeName: string | undefined;
+                  let nodeId: string | undefined;
                   
                   // Check different possible locations for the node identifier
                   if (details.nodeId) {
-                    nodeName = details.nodeId;
+                    nodeId = details.nodeId;
+                    const node = project.blocks.find(b => b.id === nodeId);
+                    nodeName = node?.name || node?.id;
                   } else if (details.nodeName) {
                     nodeName = details.nodeName;
                   } else if (details.name) {
                     nodeName = details.name;
                   } else if (details.block) {
                     nodeName = details.block.name || details.block.id;
+                    nodeId = details.block.id;
                   } else if (details.node) {
                     nodeName = details.node.name || details.node.id;
+                    nodeId = details.node.id;
                   }
 
-                  // If we found a node name, update the flow progress
-                  if (nodeName) {
+                  // If we found a node name or ID, update the flow progress
+                  if (nodeName || nodeId) {
                     setExecutionState(prev => {
                       const flowProgress = [...prev.flowProgress];
-                      const flowIndex = flowProgress.findIndex(f => f.name === nodeName);
-                      if (flowIndex !== -1) {
-                        flowProgress[flowIndex] = {
-                          ...flowProgress[flowIndex],
+                      // Find the import node that this error belongs to
+                      const importNodeIndex = flowProgress.findIndex(f => {
+                        // For import nodes, match directly
+                        if (f.name === nodeName) return true;
+                        
+                        // For transform nodes, find their parent import node
+                        const errorNode = project.blocks.find(b => 
+                          (nodeName && (b.name === nodeName || b.id === nodeName)) || 
+                          (nodeId && b.id === nodeId)
+                        );
+                        
+                        if (errorNode && errorNode.type === 'transform') {
+                          // Store the error node ID outside the function to avoid undefined issues
+                          const errorNodeId = errorNode.id;
+                          
+                          // Find the import node that this transform belongs to
+                          const importNode = project.blocks.find(b => 
+                            b.type === 'import' && 
+                            project.edges.some(e => {
+                              // Check if there's a path from import to this transform
+                              const visited = new Set<string>();
+                              function hasPathToTransform(currentId: string): boolean {
+                                if (visited.has(currentId)) return false;
+                                visited.add(currentId);
+                                if (currentId === errorNodeId) return true;
+                                const edges = project.edges.filter(e => e.source === currentId);
+                                return edges.some(e => hasPathToTransform(e.target));
+                              }
+                              return e.source === b.id && hasPathToTransform(e.target);
+                            })
+                          );
+                          return importNode && f.name === importNode.name;
+                        }
+                        return false;
+                      });
+
+                      if (importNodeIndex !== -1) {
+                        // Mark the entire import node as having an error and completed
+                        flowProgress[importNodeIndex] = {
+                          ...flowProgress[importNodeIndex],
                           hasError: true,
-                          completed: true  // Mark as completed since it errored
+                          completed: true,  // Mark as completed since it errored
+                          progress: 100  // Set progress to 100 to ensure it's fully red
                         };
                       }
+
                       return {
                         ...prev,
-                        flowProgress
+                        flowProgress,
+                        status: 'error',
+                        error: description.trim(),
+                        logs: [...prev.logs, log]
                       };
                     });
                   }
@@ -918,20 +1164,47 @@ const FlowExecutionWindow: React.FC<FlowExecutionWindowProps> = ({ project, onCl
                         flowProgress[flowIndex] = {
                           ...flowProgress[flowIndex],
                           hasError: true,
-                          completed: true  // Mark as completed since it errored
+                          completed: true,
+                          progress: 100
                         };
                       }
                       return {
                         ...prev,
-                        flowProgress
+                        flowProgress,
+                        status: 'error',
+                        error: description.trim(),
+                        logs: [...prev.logs, log]
                       };
                     });
                   }
                 }
               }
+              return; // Skip further processing for error logs
             }
-          } catch (e) {
-            // If parsing fails, treat as regular log
+
+            // Check for duplicates using the original message
+            const originalMessage = log.trim();
+            if (seenMessagesRef.current.has(originalMessage)) {
+              return;
+            }
+            seenMessagesRef.current.add(originalMessage);
+
+            // Clean up [FLOW] logs by removing the tag and timestamp
+            let cleanLog = originalMessage;
+            if (cleanLog.startsWith('[FLOW]')) {
+              // Remove the [FLOW] tag
+              cleanLog = cleanLog.replace('[FLOW]', '').trim();
+              // Remove the timestamp at the end if it exists (format: (HH:MM:SS.mmm))
+              cleanLog = cleanLog.replace(/\s*\(\d{2}:\d{2}:\d{2}\.\d{3}\)$/, '');
+            }
+            
+            setExecutionState(prev => ({
+              ...prev,
+              logs: [...prev.logs, cleanLog],
+              lastUpdate: Date.now()
+            }));
+          } catch (error) {
+            // Silently handle errors
           }
         }
 
@@ -978,7 +1251,7 @@ const FlowExecutionWindow: React.FC<FlowExecutionWindowProps> = ({ project, onCl
         // Silently handle cleanup errors
       }
     };
-  }, [showDebugLogs]);
+  }, [showDebugLogs, project]);
 
   // Add auto-scroll effect
   useEffect(() => {
@@ -1027,6 +1300,57 @@ const FlowExecutionWindow: React.FC<FlowExecutionWindowProps> = ({ project, onCl
       setElapsedTime(0);
     }
   }, [executionState.status]);
+
+  // Remove the intersection observer effect since we don't want auto-collapse
+  useEffect(() => {
+    // Create intersection observer just for tracking visibility
+    observerRef.current = new IntersectionObserver(
+      (entries) => {
+        // We don't auto-collapse anymore, just track visibility
+        entries.forEach(entry => {
+          const index = Number(entry.target.getAttribute('data-divider-index'));
+          if (!isNaN(index)) {
+            // Just update visibility state if needed, but don't collapse
+            setDividerStates(prevStates => {
+              const state = prevStates.find(s => s.index === index);
+              if (state) {
+                // Keep the current collapsed state
+                return prevStates;
+              }
+              return prevStates;
+            });
+          }
+        });
+      },
+      {
+        threshold: 0.2,
+        rootMargin: '-10% 0px'
+      }
+    );
+
+    // Observe all current divider elements
+    dividerRefs.current.forEach((element, index) => {
+      observerRef.current?.observe(element);
+    });
+
+    return () => {
+      observerRef.current?.disconnect();
+    };
+  }, []);
+
+  // Modify toggle function to only toggle the clicked divider
+  const toggleDivider = (index: number) => {
+    setDividerStates(prevStates => {
+      const newStates = prevStates.map(state => {
+        if (state.index === index) {
+          // Only toggle the clicked divider
+          return { ...state, isCollapsed: !state.isCollapsed };
+        }
+        return state;
+      });
+      return newStates;
+    });
+  };
 
   const parseInputFile = async (filePath: string): Promise<ParsedData[]> => {
     try {
@@ -1131,6 +1455,110 @@ const FlowExecutionWindow: React.FC<FlowExecutionWindowProps> = ({ project, onCl
   const [inspectionDialog, setInspectionDialog] = useState<LogData | null>(null);
   const [errorDialog, setErrorDialog] = useState<{ description: string; details: any } | null>(null);
 
+  // Add back the helper functions
+  const registerDividerRef = (index: number, element: HTMLDivElement | null) => {
+    if (element) {
+      dividerRefs.current.set(index, element);
+      observerRef.current?.observe(element);
+    } else {
+      dividerRefs.current.delete(index);
+    }
+  };
+
+  const getFirstLineAfterDivider = (dividerIndex: number): string | null => {
+    const nextLog = executionState.logs[dividerIndex + 1];
+    if (!nextLog) return null;
+    
+    if (typeof nextLog === 'string') {
+      return nextLog;
+    } else if (nextLog.type === 'transform' || nextLog.type === 'input' || nextLog.type === 'import' || 
+               nextLog.type === 'comparison_in_log' || nextLog.type === 'export') {
+      // For structured logs, return a preview string
+      switch (nextLog.type) {
+        case 'import':
+          return `Import: ${nextLog.nodeName}`;
+        case 'input':
+          return `Input Selection: ${nextLog.nodeName}`;
+        case 'transform':
+          return `Transform: ${nextLog.nodeName}`;
+        case 'comparison_in_log':
+          return `Comparison: ${nextLog.nodeName} (${nextLog.actionName})`;
+        case 'export':
+          return `Export: ${nextLog.outputFilename}`;
+        default:
+          return null;
+      }
+    }
+    return null;
+  };
+
+  const getNextDividerIndex = (currentIndex: number): number => {
+    const nextDivider = executionState.logs
+      .slice(currentIndex + 1)
+      .findIndex(log => typeof log === 'object' && log.type === 'divider');
+    return nextDivider === -1 ? executionState.logs.length : currentIndex + 1 + nextDivider;
+  };
+
+  const getElementsBetweenDividers = (dividerIndex: number): number => {
+    const nextDividerIndex = getNextDividerIndex(dividerIndex);
+    return executionState.logs
+      .slice(dividerIndex + 1, nextDividerIndex)
+      .filter(log => typeof log === 'string' || 
+        (typeof log === 'object' && 
+         (log.type === 'transform' || log.type === 'input' || log.type === 'import' || 
+          log.type === 'comparison_in_log' || log.type === 'export')))
+      .length;
+  };
+
+  const isInsideDivider = (logIndex: number): boolean => {
+    const lastDividerIndex = executionState.logs
+      .slice(0, logIndex)
+      .map((log, i) => typeof log === 'object' && log.type === 'divider' ? i : -1)
+      .filter(i => i !== -1)
+      .pop();
+
+    if (lastDividerIndex === undefined) return false;
+
+    // If this is the only element after the divider, don't indent
+    if (getElementsBetweenDividers(lastDividerIndex) <= 1) {
+      return false;
+    }
+
+    const dividerState = dividerStates.find(state => state.index === lastDividerIndex);
+    return !dividerState?.isCollapsed;
+  };
+
+  // Modify the shouldShowLog function to not automatically keep current divider expanded
+  const shouldShowLog = (index: number) => {
+    // First check if there's a stop divider before this log
+    const hasStopDividerBefore = executionState.logs
+      .slice(0, index)
+      .some(log => typeof log === 'object' && log.type === 'stop_divider');
+
+    // If there's a stop divider before this log, always show it
+    if (hasStopDividerBefore) {
+      return true;
+    }
+
+    // Otherwise, use the normal divider visibility logic
+    const lastDividerIndex = executionState.logs
+      .slice(0, index)
+      .map((log, i) => typeof log === 'object' && log.type === 'divider' ? i : -1)
+      .filter(i => i !== -1)
+      .pop();
+
+    if (lastDividerIndex === undefined) return true;
+
+    // If this is the only element after the divider, always show it
+    if (getElementsBetweenDividers(lastDividerIndex) <= 1) {
+      return true;
+    }
+
+    const dividerState = dividerStates.find(state => state.index === lastDividerIndex);
+    // Show logs if the divider is expanded
+    return !dividerState?.isCollapsed;
+  };
+
   return (
     <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column', bgcolor: '#ffffff' }}>
       {/* Header with Progress - Fixed position */}
@@ -1206,8 +1634,8 @@ const FlowExecutionWindow: React.FC<FlowExecutionWindowProps> = ({ project, onCl
                   </Typography>
                 </Box>
                 <Typography variant="body2" sx={{ 
-                  color: executionState.latestComparison.result === 'match' ? '#10a37f' : '#dc3545',
-                  fontWeight: 500,
+                  color: executionState.latestComparison.result === 'match' ? '#10a37f' : '#673ab7',
+                  fontWeight: 700,
                   ml: 0.5
                 }}>
                   ({executionState.latestComparison.result})
@@ -1309,6 +1737,184 @@ const FlowExecutionWindow: React.FC<FlowExecutionWindowProps> = ({ project, onCl
                 return null;
               }
               
+              // Handle divider logs
+              if (typeof log === 'object' && (log.type === 'divider' || log.type === 'stop_divider')) {
+                const dividerLog = log as LogData;
+                // Skip stop dividers entirely - don't render anything for them
+                if (dividerLog.type === 'stop_divider') {
+                  return null;
+                }
+                // Skip divider if it only has one element after it
+                if (getElementsBetweenDividers(index) <= 1) {
+                  return null;
+                }
+
+                const dividerState = dividerStates.find(state => state.index === index);
+                const isCollapsed = dividerState?.isCollapsed ?? true;
+                const isLastDivider = index === executionState.logs
+                  .map((l, i) => typeof l === 'object' && l.type === 'divider' ? i : -1)
+                  .filter(i => i !== -1)
+                  .pop();
+                
+                const firstLine = getFirstLineAfterDivider(index);
+
+                return (
+                  <Box
+                    key={`divider-${index}`}
+                    ref={(el: HTMLDivElement | null) => registerDividerRef(index, el)}
+                    data-divider-index={index}
+                    sx={{
+                      my: 1.5,
+                      width: '100%',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 1,
+                      cursor: 'pointer',
+                      borderBottom: '1px solid #e0e0e0',
+                      bgcolor: 'transparent',
+                      '&:hover': {
+                        bgcolor: '#f8f9fa',
+                      },
+                    }}
+                    onClick={() => !isLastDivider && toggleDivider(index)}
+                  >
+                    {!isLastDivider && (
+                      <IconButton
+                        size="small"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          toggleDivider(index);
+                        }}
+                        sx={{
+                          p: 0.5,
+                          color: '#666666',
+                          '&:hover': {
+                            color: '#333333',
+                            bgcolor: 'transparent',
+                          },
+                        }}
+                      >
+                        {isCollapsed ? <ExpandMoreIcon /> : <ExpandLessIcon />}
+                      </IconButton>
+                    )}
+                    <Box
+                      sx={{
+                        flex: 1,
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 1,
+                        opacity: firstLine ? (isCollapsed ? 0.7 : 1) : 0.7,
+                      }}
+                    >
+                      {firstLine ? (
+                        <Typography
+                          variant="body2"
+                          sx={{
+                            fontFamily: 'monospace',
+                            fontSize: '0.875rem',
+                            color: isCollapsed ? '#666666' : '#333333',
+                            fontWeight: 400,
+                            whiteSpace: 'nowrap',
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
+                            width: '100%',
+                            py: 0.5,
+                          }}
+                        >
+                          {firstLine}
+                        </Typography>
+                      ) : (
+                        <Box
+                          sx={{
+                            flex: 1,
+                          }}
+                        />
+                      )}
+                    </Box>
+                  </Box>
+                );
+              }
+
+              // Skip rendering if the log should be hidden
+              if (!shouldShowLog(index)) return null;
+
+              // Add border only to the last log in an expanded block
+              const isLastLogInBlock = () => {
+                // If there's a stop divider before this log, don't show any borders
+                const hasStopDividerBefore = executionState.logs
+                  .slice(0, index)
+                  .some(log => typeof log === 'object' && log.type === 'stop_divider');
+                
+                if (hasStopDividerBefore) {
+                  return false;
+                }
+
+                const nextDividerIndex = getNextDividerIndex(index);
+                // Find the last visible log before the next divider
+                const lastVisibleLogIndex = executionState.logs
+                  .slice(index + 1, nextDividerIndex)
+                  .map((log, i) => {
+                    const currentIndex = index + 1 + i;
+                    const lastDividerBeforeLog = executionState.logs
+                      .slice(0, currentIndex)
+                      .map((l, j) => typeof l === 'object' && l.type === 'divider' ? j : -1)
+                      .filter(j => j !== -1)
+                      .pop();
+                    
+                    if (lastDividerBeforeLog === undefined) return currentIndex;
+                    
+                    const dividerState = dividerStates.find(state => state.index === lastDividerBeforeLog);
+                    const isOnlyElement = getElementsBetweenDividers(lastDividerBeforeLog) <= 1;
+                    
+                    return (!dividerState?.isCollapsed || isOnlyElement) ? currentIndex : -1;
+                  })
+                  .filter(i => i !== -1)
+                  .pop() ?? index;
+
+                return index === lastVisibleLogIndex;
+              };
+
+              const showBottomBorder = isLastLogInBlock() && executionState.logs
+                .slice(0, index)
+                .map((log, i) => typeof log === 'object' && log.type === 'divider' ? i : -1)
+                .filter(i => i !== -1)
+                .some(i => {
+                  const dividerState = dividerStates.find(state => state.index === i);
+                  return !dividerState?.isCollapsed;
+                });
+
+              // Wrap the log in a Box with bottom border if needed
+              const LogWrapper = ({ children }: { children: React.ReactNode }) => {
+                // Check if there's a stop divider before this log
+                const hasStopDividerBefore = executionState.logs
+                  .slice(0, index)
+                  .some(log => typeof log === 'object' && log.type === 'stop_divider');
+
+                // Don't show any borders or indentation if there's a stop divider before this log
+                if (hasStopDividerBefore) {
+                  return (
+                    <Box>
+                      {children}
+                    </Box>
+                  );
+                }
+
+                // Otherwise, show border based on the original logic
+                return showBottomBorder ? (
+                  <Box sx={{ 
+                    borderBottom: '1px solid #e0e0e0', 
+                    pb: 1.5,
+                    pl: isInsideDivider(index) ? 6 : 0
+                  }}>
+                    {children}
+                  </Box>
+                ) : (
+                  <Box sx={{ pl: isInsideDivider(index) ? 6 : 0 }}>
+                    {children}
+                  </Box>
+                );
+              };
+
               if (typeof log === 'string') {
                 const isError = log.includes('[FLOW_ERROR]');
                 if (isError) {
@@ -1321,18 +1927,61 @@ const FlowExecutionWindow: React.FC<FlowExecutionWindowProps> = ({ project, onCl
                       // Remove colon from description if it exists
                       const cleanDescription = description.trim().replace(/:$/, '');
                       return (
-                        <Box
-                          key={index}
-                          sx={{
-                            display: 'flex',
-                            alignItems: 'flex-start',
-                            gap: 1,
-                            mb: 0.5,
-                            '&:hover': {
-                              bgcolor: '#f8f9fa',
-                            },
-                          }}
-                        >
+                        <LogWrapper>
+                          <Box
+                            sx={{
+                              display: 'flex',
+                              alignItems: 'flex-start',
+                              gap: 1,
+                              mb: 0.5,
+                              '&:hover': {
+                                bgcolor: '#f8f9fa',
+                              },
+                            }}
+                          >
+                            <Typography
+                              variant="body2"
+                              sx={{
+                                fontFamily: 'monospace',
+                                whiteSpace: 'pre-wrap',
+                                wordBreak: 'break-all',
+                                lineHeight: 1.5,
+                                fontSize: '0.875rem',
+                                color: '#dc3545',
+                                flex: 1
+                              }}
+                            >
+                              {cleanDescription}
+                            </Typography>
+                            <Button
+                              variant="outlined"
+                              size="small"
+                              onClick={() => setErrorDialog({ description: cleanDescription, details })}
+                              sx={{
+                                textTransform: 'none',
+                                fontFamily: 'monospace',
+                                fontSize: '0.75rem',
+                                borderColor: '#dc3545',
+                                color: '#dc3545',
+                                minWidth: 'auto',
+                                px: 1,
+                                py: 0.25,
+                                '&:hover': {
+                                  borderColor: '#bb2d3b',
+                                  color: '#bb2d3b',
+                                  bgcolor: 'rgba(220, 53, 69, 0.05)',
+                                },
+                              }}
+                            >
+                              View Details
+                            </Button>
+                          </Box>
+                        </LogWrapper>
+                      );
+                    } catch (e) {
+                      // If JSON parsing fails, display as regular error
+                      return (
+                        <LogWrapper>
                           <Typography
                             variant="body2"
                             sx={{
@@ -1342,55 +1991,14 @@ const FlowExecutionWindow: React.FC<FlowExecutionWindowProps> = ({ project, onCl
                               lineHeight: 1.5,
                               fontSize: '0.875rem',
                               color: '#dc3545',
-                              flex: 1
-                            }}
-                          >
-                            {cleanDescription}
-                          </Typography>
-                          <Button
-                            variant="outlined"
-                            size="small"
-                            onClick={() => setErrorDialog({ description: cleanDescription, details })}
-                            sx={{
-                              textTransform: 'none',
-                              fontFamily: 'monospace',
-                              fontSize: '0.75rem',
-                              borderColor: '#dc3545',
-                              color: '#dc3545',
-                              minWidth: 'auto',
-                              px: 1,
-                              py: 0.25,
                               '&:hover': {
-                                borderColor: '#bb2d3b',
-                                color: '#bb2d3b',
-                                bgcolor: 'rgba(220, 53, 69, 0.05)',
+                                bgcolor: '#f8f9fa',
                               },
                             }}
                           >
-                            View Details
-                          </Button>
-                        </Box>
-                      );
-                    } catch (e) {
-                      // If JSON parsing fails, display as regular error
-                      return (
-                        <Typography
-                          key={index}
-                          variant="body2"
-                          sx={{
-                            fontFamily: 'monospace',
-                            whiteSpace: 'pre-wrap',
-                            wordBreak: 'break-all',
-                            lineHeight: 1.5,
-                            fontSize: '0.875rem',
-                            color: '#dc3545',
-                            '&:hover': {
-                              bgcolor: '#f8f9fa',
-                            },
-                          }}
-                        >
-                          {log.replace('[FLOW_ERROR]', '').trim().replace(/:$/, '')}
-                        </Typography>
+                            {log.replace('[FLOW_ERROR]', '').trim().replace(/:$/, '')}
+                          </Typography>
+                        </LogWrapper>
                       );
                     }
                   }
@@ -1398,23 +2006,24 @@ const FlowExecutionWindow: React.FC<FlowExecutionWindowProps> = ({ project, onCl
                 
                 // Regular log message
                 return (
-                  <Typography
-                    key={index}
-                    variant="body2"
-                    sx={{
-                      fontFamily: 'monospace',
-                      whiteSpace: 'pre-wrap',
-                      wordBreak: 'break-all',
-                      lineHeight: 1.5,
-                      fontSize: '0.875rem',
-                      color: '#333333',
-                      '&:hover': {
-                        bgcolor: '#f8f9fa',
-                      },
-                    }}
-                  >
-                    {log}
-                  </Typography>
+                  <LogWrapper>
+                    <Typography
+                      variant="body2"
+                      sx={{
+                        fontFamily: 'monospace',
+                        whiteSpace: 'pre-wrap',
+                        wordBreak: 'break-all',
+                        lineHeight: 1.5,
+                        fontSize: '0.875rem',
+                        color: '#333333',
+                        '&:hover': {
+                          bgcolor: '#f8f9fa',
+                        },
+                      }}
+                    >
+                      {log}
+                    </Typography>
+                  </LogWrapper>
                 );
               } else if (log.type === 'transform' || log.type === 'input' || log.type === 'import' || log.type === 'comparison_in_log' || log.type === 'export') {
                 // Skip if this is a comparison_in_log or export and we've already shown one for this node
@@ -1448,51 +2057,85 @@ const FlowExecutionWindow: React.FC<FlowExecutionWindowProps> = ({ project, onCl
                 };
 
                 return (
-                  <Box
-                    key={index}
-                    sx={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: 1,
-                      my: 0.5,
-                      '&:hover': {
-                        bgcolor: '#f8f9fa',
-                      },
-                    }}
-                  >
-                    <Typography
-                      variant="body2"
+                  <LogWrapper>
+                    <Box
                       sx={{
-                        fontFamily: 'monospace',
-                        fontSize: '0.875rem',
-                        color: '#666666',
-                      }}
-                    >
-                      ↳
-                    </Typography>
-                    <Button
-                      variant="outlined"
-                      size="small"
-                      onClick={() => setInspectionDialog(log as LogData)}
-                      sx={{
-                        textTransform: 'none',
-                        fontFamily: 'monospace',
-                        fontSize: '0.875rem',
-                        borderColor: '#e0e0e0',
-                        color: '#333333',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 1,
+                        my: 0.5,
                         '&:hover': {
-                          borderColor: '#10a37f',
-                          color: '#10a37f',
+                          bgcolor: '#f8f9fa',
                         },
                       }}
                     >
-                      {getButtonLabel()}
-                    </Button>
-                  </Box>
+                      <Typography
+                        variant="body2"
+                        sx={{
+                          fontFamily: 'monospace',
+                          fontSize: '0.875rem',
+                          color: '#666666',
+                          visibility: isInsideDivider(index) ? 'hidden' : 'visible'  // Hide the arrow if indented
+                        }}
+                      >
+                        ↳
+                      </Typography>
+                      <Button
+                        variant="outlined"
+                        size="small"
+                        onClick={() => setInspectionDialog(log as LogData)}
+                        sx={{
+                          textTransform: 'none',
+                          fontFamily: 'monospace',
+                          fontSize: '0.875rem',
+                          borderColor: '#e0e0e0',
+                          color: '#333333',
+                          '&:hover': {
+                            borderColor: '#10a37f',
+                            color: '#10a37f',
+                          },
+                        }}
+                      >
+                        {getButtonLabel()}
+                      </Button>
+                    </Box>
+                  </LogWrapper>
                 );
               }
               return null;
             })}
+
+            {/* Spinner at the end when flow is running */}
+            {executionState.status === 'running' && (
+              <Box
+                sx={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 1,
+                  mt: 2,
+                  pl: isInsideDivider(executionState.logs.length) ? 6 : 0,
+                  opacity: 0.7,
+                }}
+              >
+                <CircularProgress
+                  size={16}
+                  thickness={4}
+                  sx={{
+                    color: '#10a37f',
+                  }}
+                />
+                <Typography
+                  variant="body2"
+                  sx={{
+                    fontFamily: 'monospace',
+                    fontSize: '0.875rem',
+                    color: '#666666',
+                  }}
+                >
+                  Processing...
+                </Typography>
+              </Box>
+            )}
           </Box>
         </Paper>
       </Box>

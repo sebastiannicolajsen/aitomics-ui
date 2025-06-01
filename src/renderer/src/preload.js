@@ -10,6 +10,7 @@ var __spreadArray = (this && this.__spreadArray) || function (to, from, pack) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 var _a = require('electron'), contextBridge = _a.contextBridge, ipcRenderer = _a.ipcRenderer;
+// Expose the electron API to the renderer
 contextBridge.exposeInMainWorld('electron', {
     ipcRenderer: {
         invoke: function (channel) {
@@ -32,4 +33,21 @@ contextBridge.exposeInMainWorld('electron', {
             ipcRenderer.removeListener(channel, func);
         }
     },
+    // Version info
+    getVersionInfo: function () {
+        return ipcRenderer.invoke('get-version-info');
+    },
+    // Update functionality
+    checkForUpdates: function () {
+        return ipcRenderer.invoke('check-for-updates');
+    },
+    downloadUpdate: function () {
+        return ipcRenderer.invoke('download-update');
+    },
+    installUpdate: function () {
+        return ipcRenderer.invoke('install-update');
+    },
+    onUpdateStatus: function (callback) {
+        ipcRenderer.on('update-status', function (_event, status, info) { return callback(status, info); });
+    }
 });
