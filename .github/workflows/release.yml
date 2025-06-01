@@ -26,21 +26,27 @@ jobs:
       - name: Install Node.js
         uses: actions/setup-node@v3
         with:
-          node-version: 18
+          node-version: 20
           cache: 'npm'
 
       - name: Install dependencies
         run: |
-          npm ci
-          cd src/renderer && npm ci
+          npm install
+          cd src/renderer && npm install
+          cd ../..
+          npm install electron-builder@26.0.12 --save-dev
 
       - name: Build renderer
         run: |
           cd src/renderer
           npm run build
+          cd ../..
 
       - name: Build preload script
-        run: npm run build-preload
+        run: |
+          cd src/renderer
+          cd ../..
+          npm run build-preload
 
       - name: Build/Release Electron app
         uses: samuelmeuli/action-electron-builder@v1
@@ -48,6 +54,7 @@ jobs:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           release: ${{ startsWith(github.ref, 'refs/tags/v') }}
           artifact_name: Aitomics-UI-${{ matrix.os }}-${{ github.ref_name }}
+          args: --mac --win --publish always
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           NODE_ENV: production
