@@ -9,6 +9,7 @@ import BlockEditor from './components/BlockEditor';
 import { builtInActions } from './actions/builtInActions';
 import ActionEditor from './components/ActionEditor';
 import { Action } from './types/Project';
+import VersionInfo from './components/VersionInfo';
 
 declare global {
   interface Window {
@@ -296,25 +297,45 @@ const App: React.FC = () => {
     <ThemeProvider theme={openAITheme}>
       <CssBaseline />
       <Box sx={{ display: 'flex', height: '100vh', background: openAITheme.palette.background.default }}>
-        <Box sx={{ width: 320, borderRight: 0, bgcolor: openAITheme.palette.background.paper, p: 2, boxShadow: 3 }}>
-          <ProjectList
-            projects={projects}
-            selectedProject={selectedProject}
-            onSelectProject={(project) => {
-              setIsActionEditorOpen(false);
-              setSelectedAction(null);
-              setSelectedProject(project);
-            }}
-            onCreateProject={handleCreateProject}
-            onDeleteProject={handleDeleteProject}
-            onUpdateProject={handleUpdateProject}
-            onEditAction={handleEditAction}
-            selectedAction={selectedAction}
-            globalActions={globalActions}
-            setGlobalActions={setGlobalActions}
-            onActionDragStart={handleActionDragStart}
-            onActionDragEnd={handleActionDragEnd}
-          />
+        <Box sx={{ 
+          width: 320, 
+          borderRight: 0, 
+          bgcolor: openAITheme.palette.background.paper, 
+          p: 2, 
+          boxShadow: 3,
+          display: 'flex',
+          flexDirection: 'column'
+        }}>
+          <Box sx={{ flex: 1 }}>
+            <ProjectList
+              projects={projects}
+              selectedProject={selectedProject}
+              onSelectProject={(project) => {
+                setIsActionEditorOpen(false);
+                setSelectedAction(null);
+                setSelectedProject(project);
+              }}
+              onCreateProject={handleCreateProject}
+              onDeleteProject={handleDeleteProject}
+              onUpdateProject={handleUpdateProject}
+              onEditAction={handleEditAction}
+              selectedAction={selectedAction}
+              globalActions={globalActions}
+              setGlobalActions={setGlobalActions}
+              onActionDragStart={handleActionDragStart}
+              onActionDragEnd={handleActionDragEnd}
+            />
+          </Box>
+          <Box sx={{ 
+            pt: 2, 
+            mt: 2, 
+            borderTop: 1, 
+            borderColor: 'divider',
+            display: 'flex',
+            justifyContent: 'center'
+          }}>
+            <VersionInfo />
+          </Box>
         </Box>
         <Box sx={{ flexGrow: 1, p: 3, bgcolor: openAITheme.palette.background.default }}>
           {isActionEditorOpen && selectedAction ? (

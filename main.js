@@ -5,6 +5,8 @@ const Store = require('electron-store');
 const { parse } = require('csv-parse/sync');
 const { spawn } = require('child_process');
 const Module = require('module');  // Add Module for proper module loading
+const fetch = require('node-fetch');
+const { autoUpdater } = require('electron-updater');
 
 // Initialize store for project data
 const store = new Store({
@@ -18,10 +20,60 @@ const actionStore = new Store({
   clearInvalidConfig: true
 });
 
-// Set development mode
-process.env.NODE_ENV = 'development';
+// Initialize store for app settings
+const appStore = new Store({
+  name: 'app-settings',
+  clearInvalidConfig: true
+});
 
+// Set development mode only if not packaged
+if (!app.isPackaged) {
+  process.env.NODE_ENV = 'development';
+}
+
+let mainWindow = null;
 let currentFlowProcess = null;
+
+// Configure auto-updater
+autoUpdater.autoDownload = false;
+autoUpdater.autoInstallOnAppQuit = true;
+
+// Auto-updater events
+autoUpdater.on('checking-for-update', () => {
+  if (mainWindow) {
+    mainWindow.webContents.send('update-status', 'checking');
+  }
+});
+
+autoUpdater.on('update-available', (info) => {
+  if (mainWindow) {
+    mainWindow.webContents.send('update-status', 'available', info);
+  }
+});
+
+autoUpdater.on('update-not-available', () => {
+  if (mainWindow) {
+    mainWindow.webContents.send('update-status', 'not-available');
+  }
+});
+
+autoUpdater.on('error', (err) => {
+  if (mainWindow) {
+    mainWindow.webContents.send('update-status', 'error', err.message);
+  }
+});
+
+autoUpdater.on('download-progress', (progressObj) => {
+  if (mainWindow) {
+    mainWindow.webContents.send('update-status', 'downloading', progressObj);
+  }
+});
+
+autoUpdater.on('update-downloaded', (info) => {
+  if (mainWindow) {
+    mainWindow.webContents.send('update-status', 'downloaded', info);
+  }
+});
 
 // Register IPC handlers
 function registerIpcHandlers() {
@@ -655,30 +707,72 @@ function registerIpcHandlers() {
       throw error;
     }
   });
-}
 
-function createWindow() {
-  const mainWindow = new BrowserWindow({
-    width: 1200,
-    height: 800,
-    webPreferences: {
-      nodeIntegration: false,
-      contextIsolation: true,
-      preload: process.env.NODE_ENV === 'development' 
-        ? path.join(__dirname, 'src/renderer/src/preload.js')
-        : path.join(__dirname, 'src/renderer/build/preload.js'),
-      sandbox: false
+  // Add handler for fetching LM Studio models
+  ipcMain.handle('fetch-lm-studio-models', async () => {
+    try {
+      const response = await fetch('http://127.0.0.1:1234/api/v0/models');
+      if (!response.ok) {
+        throw new Error('Failed to fetch models');
+      }
+      const data = await response.json();
+      return { success: true, data: data.data || [] };
+    } catch (error) {
+      console.error('Error fetching LM Studio models:', error);
+      return { 
+        success: false, 
+        error: error.message || 'Failed to fetch models. Please ensure LM Studio is running and developer mode is enabled.'
+      };
     }
   });
 
-  // In development, load from React dev server
+  // Add version info handler
+  ipcMain.handle('get-version-info', () => {
+    return {
+      appVersion: app.getVersion(),
+      aitomicsVersion: require('./node_modules/aitomics/package.json').version
+    };
+  });
+
+  // Add update handlers
+  ipcMain.handle('check-for-updates', () => {
+    autoUpdater.checkForUpdates();
+  });
+
+  ipcMain.handle('download-update', () => {
+    autoUpdater.downloadUpdate();
+  });
+
+  ipcMain.handle('install-update', () => {
+    autoUpdater.quitAndInstall();
+  });
+}
+
+function createWindow() {
+  mainWindow = new BrowserWindow({
+    width: 1200,
+    height: 800,
+    webPreferences: {
+      nodeIntegration: true,
+      contextIsolation: true,
+      preload: path.join(__dirname, 'src/renderer/src/preload.js')
+    }
+  });
+
+  // Load the app
   if (process.env.NODE_ENV === 'development') {
     mainWindow.loadURL('http://localhost:3000');
     mainWindow.webContents.openDevTools();
   } else {
-    // In production, load the built React app
     mainWindow.loadFile(path.join(__dirname, 'src/renderer/build/index.html'));
   }
+
+  // Check for updates after window is ready
+  mainWindow.webContents.on('did-finish-load', () => {
+    if (!process.env.NODE_ENV === 'development') {
+      autoUpdater.checkForUpdates();
+    }
+  });
 }
 
 // Register IPC handlers when app is ready
