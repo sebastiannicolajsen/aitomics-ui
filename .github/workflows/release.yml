@@ -23,24 +23,35 @@ jobs:
       - name: Check out Git repository
         uses: actions/checkout@v3
 
-      - name: Install Node.js
-        uses: actions/setup-node@v3
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: '20'
           cache: 'npm'
+          cache-dependency-path: |
+            **/package-lock.json
+            **/package.json
 
       - name: Install dependencies
         run: |
+          npm ci
+          cd src/renderer
+          rm -rf node_modules package-lock.json
           npm install
-          cd src/renderer && npm install
           cd ../..
           npm install electron-builder@26.0.12 --save-dev
 
       - name: Build renderer
         run: |
           cd src/renderer
-          npm run build
+          export NODE_OPTIONS="--max-old-space-size=4096"
+          export CI=false
+          export DEBUG=*
+          npm run build --verbose
           cd ../..
+        timeout-minutes: 15
+        env:
+          NODE_ENV: production
 
       - name: Build preload script
         run: |
