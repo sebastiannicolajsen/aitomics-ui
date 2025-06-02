@@ -67,7 +67,7 @@
     ],
     "files": [
       "!build/icon.icns",
-      "main.js",
+      "!main.js",
       "src/renderer/public/**/*",
       "src/renderer/build/**/*",
       "!dist/**/*",
