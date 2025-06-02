@@ -13,8 +13,9 @@ jobs:
         os: [macos-latest, windows-latest]
 
     env:
-      ELECTRON_BUILDER_ALLOW_UNRESOLVED_DEPENDENCIES: true
-      ELECTRON_BUILDER_USE_SYMLINKS: false
+      ALLOW_UNRESOLVED_DEPENDENCIES: true
+      USE_SYMLINKS: false
+      USE_HARD_LINKS: false
       NODE_OPTIONS: --max_old_space_size=4096
 
     steps:
