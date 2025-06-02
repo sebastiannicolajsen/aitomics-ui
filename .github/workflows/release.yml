@@ -16,7 +16,7 @@ jobs:
   release:
     runs-on: ${{ matrix.os }}
     # Add timeout-minutes at the job level
-    timeout-minutes: 60
+    timeout-minutes: 30
     # Add runner timeout
     env:
       ACTIONS_RUNNER_DEBUG: true
@@ -145,204 +145,30 @@ jobs:
           ACTIONS_CACHE_DEBUG: true
           ACTIONS_RUNNER_DEBUG: true
 
-      - name: Install root dependencies
+      - name: Install dependencies
         run: |
-          # Start a background process to show progress
-          (
-            while true; do
-              echo "Installation in progress... $(date)"
-              echo "Current directory: $(pwd)"
-              echo "Disk space:"
-              df -h
-              echo "Memory usage:"
-              free -h || true
-              ps aux | grep npm || true
-              sleep 10
-            done
-          ) & PROGRESS_PID=$!
+          # Install root dependencies
+          npm install
           
-          # Function to clean up the progress process
-          cleanup() {
-            echo "Cleaning up..."
-            kill $PROGRESS_PID 2>/dev/null || true
-            echo "Cleanup complete"
-          }
-          trap cleanup EXIT
-          
-          echo "Installing root dependencies..."
-          echo "Cache hit status: ${{ steps.root-cache.outputs.cache-hit }}"
-          echo "Cache primary key: ${{ steps.root-cache.outputs.cache-primary-key }}"
-          echo "Cache matched key: ${{ steps.renderer-cache.outputs.cache-matched-key }}"
-          
-          # Clean install to ensure fresh state
-          echo "Step 1/4: Cleaning node_modules..."
-          rm -rf node_modules package-lock.json
-          
-          # Use npm install to update dependencies
-          echo "Step 2/4: Installing dependencies..."
-          npm install --no-audit --no-fund --no-package-lock --progress=false --loglevel=verbose || {
-            echo "Root dependencies installation failed!"
-            exit 1
-          }
-          
-          # Generate fresh package-lock.json
-          echo "Step 3/4: Generating package-lock.json..."
-          npm install --package-lock-only --progress=false --loglevel=verbose || {
-            echo "Failed to generate package-lock.json!"
-            exit 1
-          }
-          
-          # Verify the installation
-          echo "Step 4/4: Verifying installation..."
-          if [ ! -d "node_modules" ]; then
-            echo "node_modules directory not found after installation!"
-            exit 1
-          fi
-          
-          # List installed modules for debugging
-          echo "Installation complete. Installed modules:"
-          ls -la node_modules | head -n 5
-        timeout-minutes: 15
-        env:
-          NODE_OPTIONS: "--max-old-space-size=4096"
-
-      - name: Install renderer dependencies
-        run: |
-          # Start a background process to show progress
-          (
-            while true; do
-              echo "Installation in progress... $(date)"
-              sleep 10
-            done
-          ) & PROGRESS_PID=$!
-          
-          # Function to clean up the progress process
-          cleanup() {
-            kill $PROGRESS_PID 2>/dev/null || true
-          }
-          trap cleanup EXIT
-          
+          # Install renderer dependencies
           cd src/renderer
-          echo "Installing renderer dependencies..."
-          echo "Cache hit status: ${{ steps.renderer-cache.outputs.cache-hit }}"
-          echo "Cache primary key: ${{ steps.renderer-cache.outputs.cache-primary-key }}"
-          echo "Cache matched key: ${{ steps.renderer-cache.outputs.cache-matched-key }}"
-          
-          # Clean install to ensure fresh state
-          echo "Step 1/4: Cleaning node_modules..."
-          rm -rf node_modules package-lock.json
-          
-          # Use npm install to update dependencies
-          echo "Step 2/4: Installing dependencies..."
-          npm install --no-audit --no-fund --no-package-lock --progress=false || {
-            echo "Renderer dependencies installation failed!"
-            exit 1
-          }
-          
-          # Generate fresh package-lock.json
-          echo "Step 3/4: Generating package-lock.json..."
-          npm install --package-lock-only --progress=false || {
-            echo "Failed to generate package-lock.json!"
-            exit 1
-          }
-          
-          # Verify the installation
-          echo "Step 4/4: Verifying installation..."
-          if [ ! -d "node_modules" ]; then
-            echo "node_modules directory not found after installation!"
-            exit 1
-          fi
-          
-          # List installed modules for debugging
-          echo "Installation complete. Installed modules:"
-          ls -la node_modules | head -n 5
+          npm install
           cd ../..
-        timeout-minutes: 15
         env:
           NODE_OPTIONS: "--max-old-space-size=4096"
-
-      - name: Install electron-builder
-        run: |
-          echo "Installing electron-builder..."
-          # Install globally to ensure it's available for npx
-          npm install -g electron-builder@26.0.12
-          # Also install locally for the project
-          npm install electron-builder@26.0.12 --save-dev --prefer-offline --no-audit --no-fund --no-package-lock || {
-            echo "Electron-builder installation failed!"
-            exit 1
-          }
-          # Verify installation
-          if ! command -v electron-builder &> /dev/null; then
-            echo "Electron-builder not found in PATH after installation!"
-            exit 1
-          fi
-          echo "Electron-builder installed successfully at $(which electron-builder)"
-        timeout-minutes: 2
-        env:
-          NODE_OPTIONS: "--max-old-space-size=4096"
-
-      - name: Verify installations
-        run: |
-          echo "Verifying installations..."
-          if [ ! -d "node_modules" ] || [ ! -d "src/renderer/node_modules" ]; then
-            echo "Installation verification failed! Required node_modules directories not found."
-            exit 1
-          fi
-          echo "All dependencies installed successfully!"
-        timeout-minutes: 1
 
       - name: Build renderer
         run: |
           cd src/renderer
-          export NODE_OPTIONS="--max-old-space-size=4096"
-          export CI=false
-          export GENERATE_SOURCEMAP=false
-          export DISABLE_ESLINT_PLUGIN=true
-          export NODE_ENV=production
-          export GITHUB_ACTIONS=true
-          export TSC_COMPILE_ON_ERROR=true
-          
-          echo "Starting renderer build..."
-          echo "Step 1/4: Cleaning build directory..."
-          rm -rf build
-          
-          echo "Step 2/4: Starting build process..."
-          # Start a background process to show progress
-          (
-            while true; do
-              echo "Build in progress... $(date)"
-              sleep 30
-            done
-          ) & PROGRESS_PID=$!
-          
-          # Run the build
-          if ! npm run build; then
-            kill $PROGRESS_PID 2>/dev/null || true
-            echo "Build failed!"
-            exit 1
-          fi
-          
-          # Kill the progress process
-          kill $PROGRESS_PID 2>/dev/null || true
-          
-          echo "Step 3/4: Verifying build output..."
-          if [ ! -d "build" ]; then
-            echo "Build directory not found!"
-            exit 1
-          fi
-          
-          echo "Step 4/4: Build completed successfully"
+          npm run build
           cd ../..
-        timeout-minutes: 30
         env:
-          NODE_ENV: production
-          GITHUB_ACTIONS: true
+          NODE_OPTIONS: "--max-old-space-size=4096"
+          CI: false
+          GENERATE_SOURCEMAP: false
 
       - name: Build preload script
-        run: |
-          cd src/renderer
-          cd ../..
-          npm run build-preload
+        run: npm run build-preload
 
       - name: Build/Release Electron app
         uses: samuelmeuli/action-electron-builder@v1
@@ -354,6 +180,4 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           NODE_ENV: production
-          ELECTRON_BUILDER_ALLOW_UNRESOLVED_DEPENDENCIES: true
-          # Remove DEBUG flag to reduce noise
-          # DEBUG: electron-builder 
+          ELECTRON_BUILDER_ALLOW_UNRESOLVED_DEPENDENCIES: true 
