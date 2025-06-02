@@ -107,12 +107,19 @@ jobs:
           echo "Cache primary key: ${{ steps.renderer-cache.outputs.cache-primary-key }}"
           echo "Cache matched key: ${{ steps.renderer-cache.outputs.cache-matched-key }}"
           
-          # Always do a fresh install for now to debug caching
-          echo "Performing fresh install..."
-          npm ci --prefer-offline --no-audit --no-fund || {
+          # Use npm install to update the lock file
+          echo "Updating dependencies and lock file..."
+          npm install --no-audit --no-fund || {
             echo "Renderer dependencies installation failed!"
             exit 1
           }
+          
+          # Verify the installation
+          echo "Verifying installation..."
+          if [ ! -d "node_modules" ]; then
+            echo "node_modules directory not found after installation!"
+            exit 1
+          fi
           
           # List installed modules for debugging
           echo "Installed modules:"
