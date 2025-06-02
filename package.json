@@ -14,7 +14,8 @@
     "dist": "electron-builder",
     "publish": "electron-builder -p always",
     "release": "node scripts/release.js",
-    "package-app": "cd src/renderer && npm run build && cd ../.. && npm run build-preload && npm run prepare-flow-deps && npm run dist"
+    "package-app": "cd src/renderer && npm run build && cd ../.. && npm run build-preload && npm run prepare-flow-deps && npm run dist",
+    "build:ci": "node scripts/build-ci.js"
   },
   "author": "",
   "license": "ISC",

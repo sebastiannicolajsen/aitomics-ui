@@ -19,6 +19,12 @@ jobs:
       NODE_OPTIONS: "--max-old-space-size=4096"
       NPM_CONFIG_FETCH_TIMEOUT: 300000
       NPM_CONFIG_FETCH_RETRIES: 5
+      ELECTRON_BUILDER_ALLOW_UNRESOLVED_DEPENDENCIES: true
+      ELECTRON_VERSION: "28.1.0"
+      ELECTRON_BUILDER_ARCH: "arm64"
+      ELECTRON_BUILDER_PLATFORM: "darwin"
+      ELECTRON_BUILDER_APP_DIR: "./"
+      ELECTRON_BUILDER_BUILD_FROM_SOURCE: "false"
 
     steps:
       - name: Check out Git repository
@@ -57,6 +63,10 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           ELECTRON_BUILDER_ALLOW_UNRESOLVED_DEPENDENCIES: true
           ELECTRON_VERSION: "28.1.0"
+          ELECTRON_BUILDER_ARCH: "arm64"
+          ELECTRON_BUILDER_PLATFORM: "darwin"
+          ELECTRON_BUILDER_APP_DIR: "./"
+          ELECTRON_BUILDER_BUILD_FROM_SOURCE: "false"
 
       # Windows specific steps (using the working version)
       - name: Package Windows app
@@ -66,6 +76,10 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           ELECTRON_BUILDER_ALLOW_UNRESOLVED_DEPENDENCIES: true
           ELECTRON_VERSION: "28.1.0"
+          ELECTRON_BUILDER_ARCH: "x64"
+          ELECTRON_BUILDER_PLATFORM: "win32"
+          ELECTRON_BUILDER_APP_DIR: "./"
+          ELECTRON_BUILDER_BUILD_FROM_SOURCE: "false"
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
