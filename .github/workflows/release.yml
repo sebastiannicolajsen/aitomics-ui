@@ -182,6 +182,36 @@ jobs:
         env:
           NODE_OPTIONS: "--max-old-space-size=4096"
 
+      - name: Install electron
+        run: |
+          echo "Installing electron..."
+          npm install electron@28.1.0 --save-exact
+          echo "Verifying electron installation..."
+          npm list electron
+        env:
+          NODE_OPTIONS: "--max-old-space-size=4096"
+
+      - name: Save npm cache
+        uses: actions/cache@v3
+        if: steps.npm-cache.outputs.cache-hit != 'true'
+        with:
+          path: ~/.npm
+          key: ${{ runner.os }}-npm-cache-${{ hashFiles('**/package-lock.json') }}
+
+      - name: Save root node_modules cache
+        uses: actions/cache@v3
+        if: steps.root-cache.outputs.cache-hit != 'true'
+        with:
+          path: node_modules
+          key: ${{ runner.os }}-root-modules-${{ hashFiles('package-lock.json') }}
+
+      - name: Save renderer node_modules cache
+        uses: actions/cache@v3
+        if: steps.renderer-cache.outputs.cache-hit != 'true'
+        with:
+          path: src/renderer/node_modules
+          key: ${{ runner.os }}-renderer-modules-${{ hashFiles('src/renderer/package-lock.json') }}
+
       - name: Build renderer
         run: |
           cd src/renderer
@@ -200,11 +230,6 @@ jobs:
         env:
           NODE_OPTIONS: "--max-old-space-size=4096"
 
-      - name: Install electron
-        run: npm install electron@28.1.0 --save-dev
-        env:
-          NODE_OPTIONS: "--max-old-space-size=4096"
-
       - name: Build/Release Electron app
         uses: samuelmeuli/action-electron-builder@v1
         with:
@@ -215,6 +240,7 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           NODE_ENV: production
           ELECTRON_BUILDER_ALLOW_UNRESOLVED_DEPENDENCIES: true
+          ELECTRON_VERSION: "28.1.0"
 
   windows-release:
     needs: macos-release  # This ensures Windows job runs after macOS job completes
@@ -386,6 +412,36 @@ jobs:
         env:
           NODE_OPTIONS: "--max-old-space-size=4096"
 
+      - name: Install electron
+        run: |
+          echo "Installing electron..."
+          npm install electron@28.1.0 --save-exact
+          echo "Verifying electron installation..."
+          npm list electron
+        env:
+          NODE_OPTIONS: "--max-old-space-size=4096"
+
+      - name: Save npm cache
+        uses: actions/cache@v3
+        if: steps.npm-cache.outputs.cache-hit != 'true'
+        with:
+          path: ~/.npm
+          key: ${{ runner.os }}-npm-cache-${{ hashFiles('**/package-lock.json') }}
+
+      - name: Save root node_modules cache
+        uses: actions/cache@v3
+        if: steps.root-cache.outputs.cache-hit != 'true'
+        with:
+          path: node_modules
+          key: ${{ runner.os }}-root-modules-${{ hashFiles('package-lock.json') }}
+
+      - name: Save renderer node_modules cache
+        uses: actions/cache@v3
+        if: steps.renderer-cache.outputs.cache-hit != 'true'
+        with:
+          path: src/renderer/node_modules
+          key: ${{ runner.os }}-renderer-modules-${{ hashFiles('src/renderer/package-lock.json') }}
+
       - name: Build renderer
         run: |
           cd src/renderer
@@ -404,11 +460,6 @@ jobs:
         env:
           NODE_OPTIONS: "--max-old-space-size=4096"
 
-      - name: Install electron
-        run: npm install electron@28.1.0 --save-dev
-        env:
-          NODE_OPTIONS: "--max-old-space-size=4096"
-
       - name: Build/Release Electron app
         uses: samuelmeuli/action-electron-builder@v1
         with:
@@ -418,4 +469,5 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           NODE_ENV: production
-          ELECTRON_BUILDER_ALLOW_UNRESOLVED_DEPENDENCIES: true 
+          ELECTRON_BUILDER_ALLOW_UNRESOLVED_DEPENDENCIES: true
+          ELECTRON_VERSION: "28.1.0" 
