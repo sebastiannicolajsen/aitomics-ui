@@ -1,34 +1,24 @@
-name: Build
+name: Build and Release
 
 on:
   push:
     tags:
       - 'v*'
 
-permissions:
-  contents: write
-
 jobs:
   build:
+    runs-on: ${{ matrix.os }}
     strategy:
       matrix:
         os: [macos-latest, windows-latest]
-    runs-on: ${{ matrix.os }}
-    timeout-minutes: 30
+
     env:
-      NODE_OPTIONS: "--max-old-space-size=4096"
-      NPM_CONFIG_FETCH_TIMEOUT: 300000
-      NPM_CONFIG_FETCH_RETRIES: 5
       ELECTRON_BUILDER_ALLOW_UNRESOLVED_DEPENDENCIES: true
-      ELECTRON_VERSION: "28.1.0"
-      ELECTRON_BUILDER_ARCH: "arm64"
-      ELECTRON_BUILDER_PLATFORM: "darwin"
-      ELECTRON_BUILDER_APP_DIR: "./"
-      ELECTRON_BUILDER_BUILD_FROM_SOURCE: "false"
+      ELECTRON_BUILDER_USE_SYMLINKS: false
+      NODE_OPTIONS: --max_old_space_size=4096
 
     steps:
-      - name: Check out Git repository
-        uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -37,79 +27,37 @@ jobs:
           cache: 'npm'
 
       - name: Install dependencies
-        run: |
-          npm install
-          cd src/renderer && npm install && cd ../..
-
-      # macOS specific steps
-      - name: Prepare macOS build environment
-        if: matrix.os == 'macos-latest'
-        run: |
-          # Clean dist directory
-          rm -rf dist/
-          
-          # Ensure all public assets have correct permissions
-          chmod -R 644 build/icon.* || true
-          chmod -R 644 src/renderer/public/* || true
-          
-          # Ensure build directory exists
-          mkdir -p build
-          
-          # Copy public assets to build directory if they don't exist
-          if [ ! -f build/icon.png ]; then
-            cp src/renderer/public/logo512.png build/icon.png
-          fi
-          if [ ! -f build/icon.ico ]; then
-            cp src/renderer/public/favicon.ico build/icon.ico
-          fi
+        run: npm ci
 
       - name: Build macOS app
         if: matrix.os == 'macos-latest'
-        run: |
-          cd src/renderer && npm run build && cd ../..
-          npm run build-preload
-          npm run prepare-flow-deps
-          npm run dist
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          ELECTRON_BUILDER_ALLOW_UNRESOLVED_DEPENDENCIES: true
-          ELECTRON_VERSION: "28.1.0"
-          ELECTRON_BUILDER_ARCH: "arm64"
-          ELECTRON_BUILDER_PLATFORM: "darwin"
-          ELECTRON_BUILDER_APP_DIR: "./"
-          ELECTRON_BUILDER_BUILD_FROM_SOURCE: "false"
+        run: npm run package-app
 
-      # Windows specific steps (using the working version)
       - name: Package Windows app
         if: matrix.os == 'windows-latest'
         run: npm run package-app
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          ELECTRON_BUILDER_ALLOW_UNRESOLVED_DEPENDENCIES: true
-          ELECTRON_VERSION: "28.1.0"
-          ELECTRON_BUILDER_ARCH: "x64"
-          ELECTRON_BUILDER_PLATFORM: "win32"
-          ELECTRON_BUILDER_APP_DIR: "./"
-          ELECTRON_BUILDER_BUILD_FROM_SOURCE: "false"
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: aitomics-ui-${{ matrix.os }}
-          path: dist/*
+          name: ${{ matrix.os }}-build
+          path: dist/
 
   release:
     needs: build
-    if: startsWith(github.ref, 'refs/tags/v')
     runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/v')
     steps:
+      - uses: actions/checkout@v4
+
       - name: Download all artifacts
         uses: actions/download-artifact@v4
-        with:
-          path: artifacts
 
       - name: Create Release
         uses: softprops/action-gh-release@v1
         with:
-          files: artifacts/**/*
-          generate_release_notes: true 
+          files: |
+            macos-latest-build/**/*
+            windows-latest-build/**/*
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} 
