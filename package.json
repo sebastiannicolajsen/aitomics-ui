@@ -1,6 +1,6 @@
 {
   "name": "aitomics-ui",
-  "version": "1.0.0-beta.59",
+  "version": "1.0.0-beta.60",
   "description": "A local application for managing Aitomics projects with a block-based code editor",
   "main": "main.js",
   "scripts": {
@@ -50,9 +50,21 @@
       "repo": "aitomics-ui"
     },
     "asar": {
-      "smartUnpack": true,
-      "unpackDir": "build/flow-dependencies/**/*"
+      "smartUnpack": true
     },
+    "asarUnpack": [
+      "build/flow-dependencies/**/*",
+      "node_modules/ajv/**/*",
+      "node_modules/conf/**/*",
+      "node_modules/electron-store/**/*",
+      "node_modules/p-limit/**/*",
+      "node_modules/aitomics/**/*",
+      "node_modules/csv-parse/**/*",
+      "node_modules/node-fetch/**/*",
+      "node_modules/@monaco-editor/**/*",
+      "node_modules/react-markdown/**/*",
+      "node_modules/node/bin/node"
+    ],
     "files": [
       "!build/icon.icns",
       "!main.js",
@@ -77,6 +89,32 @@
       {
         "from": "main.js",
         "to": "main.js"
+      },
+      {
+        "from": "src/renderer/build",
+        "to": "app.asar.unpacked/src/renderer/build",
+        "filter": [
+          "**/*"
+        ]
+      },
+      {
+        "from": "build/flow-dependencies",
+        "to": "app.asar.unpacked/build/flow-dependencies",
+        "filter": [
+          "**/*",
+          "node_modules/**/*"
+        ]
+      },
+      {
+        "from": "scripts",
+        "to": "app.asar.unpacked/scripts",
+        "filter": [
+          "**/*"
+        ]
+      },
+      {
+        "from": "node_modules/node/bin/node",
+        "to": "app.asar.unpacked/node"
       }
     ],
     "directories": {
