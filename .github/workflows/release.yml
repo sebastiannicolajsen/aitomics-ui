@@ -43,18 +43,21 @@ jobs:
       - name: Generate cache key
         id: cache-key
         run: |
-          ROOT_PKG_HASH=$(sha256sum package.json | cut -d' ' -f1)
-          RENDERER_PKG_HASH=$(sha256sum src/renderer/package.json | cut -d' ' -f1)
+          # Use a consistent method to generate hashes
+          ROOT_PKG_HASH=$(cat package.json | sha256sum | cut -d' ' -f1)
+          RENDERER_PKG_HASH=$(cat src/renderer/package.json | sha256sum | cut -d' ' -f1)
           echo "root_pkg_hash=$ROOT_PKG_HASH" >> $GITHUB_OUTPUT
           echo "renderer_pkg_hash=$RENDERER_PKG_HASH" >> $GITHUB_OUTPUT
+          echo "platform=common" >> $GITHUB_OUTPUT
 
       - name: Cache root node_modules
         id: root-cache
         uses: actions/cache@v4
         with:
           path: node_modules
-          key: root-modules-${{ steps.cache-key.outputs.root_pkg_hash }}
+          key: root-modules-${{ steps.cache-key.outputs.platform }}-${{ steps.cache-key.outputs.root_pkg_hash }}
           restore-keys: |
+            root-modules-${{ steps.cache-key.outputs.platform }}-
             root-modules-
 
       - name: Cache renderer node_modules
@@ -62,8 +65,9 @@ jobs:
         uses: actions/cache@v4
         with:
           path: src/renderer/node_modules
-          key: renderer-modules-${{ steps.cache-key.outputs.renderer_pkg_hash }}
+          key: renderer-modules-${{ steps.cache-key.outputs.platform }}-${{ steps.cache-key.outputs.renderer_pkg_hash }}
           restore-keys: |
+            renderer-modules-${{ steps.cache-key.outputs.platform }}-
             renderer-modules-
 
       - name: Install root dependencies
@@ -112,6 +116,26 @@ jobs:
         if: steps.root-cache.outputs.cache-hit != 'true'
         run: npm run build-preload
 
+      - name: Prepare build files
+        run: |
+          # Create platform-specific build directories
+          mkdir -p build-mac build-win
+          # Copy icons and other build resources to both directories
+          cp -r build/icon.icns build/icon.png build/icon.ico build/entitlements.mac.plist build-mac/ || true
+          cp -r build/icon.icns build/icon.png build/icon.ico build/entitlements.mac.plist build-win/ || true
+          # Ensure flow dependencies are prepared in both directories
+          npm run prepare-flow-deps
+          for dir in build-mac build-win; do
+            rm -rf $dir/flow-dependencies
+            mkdir -p $dir/flow-dependencies
+            cp -r node_modules/aitomics $dir/flow-dependencies/
+            cp -r node_modules/csv-parse $dir/flow-dependencies/
+            cp -r node_modules/node-fetch $dir/flow-dependencies/
+            cp -r node_modules/@monaco-editor $dir/flow-dependencies/
+            cp -r node_modules/react-markdown $dir/flow-dependencies/
+            cp -r node_modules/node/bin/node $dir/flow-dependencies/
+          done
+
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4
         with:
@@ -120,16 +144,14 @@ jobs:
             src/renderer/build
             src/renderer/src/preload.js
             src/renderer/public
-            build/flow-dependencies
-            build/icon.icns
-            build/icon.png
-            build/icon.ico
-            build/entitlements.mac.plist
+            build-mac
+            build-win
             node_modules
             package.json
             package-lock.json
             main.js
             scripts
+          retention-days: 1
 
   package-macos:
     needs: build-common
@@ -139,40 +161,8 @@ jobs:
       - name: Check out Git repository
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0  # Fetch all history for all branches and tags
+          fetch-depth: 0
         timeout-minutes: 5
-
-      - name: Generate cache key
-        id: cache-key
-        run: |
-          ROOT_PKG_HASH=$(sha256sum package.json | cut -d' ' -f1)
-          RENDERER_PKG_HASH=$(sha256sum src/renderer/package.json | cut -d' ' -f1)
-          echo "root_pkg_hash=$ROOT_PKG_HASH" >> $GITHUB_OUTPUT
-          echo "renderer_pkg_hash=$RENDERER_PKG_HASH" >> $GITHUB_OUTPUT
-
-      - name: Cache npm
-        uses: actions/cache@v4
-        with:
-          path: ~/.npm
-          key: npm-cache-${{ steps.cache-key.outputs.root_pkg_hash }}-${{ steps.cache-key.outputs.renderer_pkg_hash }}
-          restore-keys: |
-            npm-cache-
-
-      - name: Cache root node_modules
-        uses: actions/cache@v4
-        with:
-          path: node_modules
-          key: root-modules-${{ steps.cache-key.outputs.root_pkg_hash }}
-          restore-keys: |
-            root-modules-
-
-      - name: Cache renderer node_modules
-        uses: actions/cache@v4
-        with:
-          path: src/renderer/node_modules
-          key: renderer-modules-${{ steps.cache-key.outputs.renderer_pkg_hash }}
-          restore-keys: |
-            renderer-modules-
 
       - name: Download build artifacts
         uses: actions/download-artifact@v4
@@ -182,8 +172,16 @@ jobs:
 
       - name: Setup workspace
         run: |
-          rm -rf build dist-mac
-          mkdir -p build dist-mac
+          # Create a clean workspace
+          rm -rf dist-mac
+          mkdir -p dist-mac
+          # Remove any existing build directory and symlink the platform-specific one
+          rm -rf build
+          ln -s build-mac build
+          # Verify critical files exist
+          ls -la build/
+          ls -la build/flow-dependencies/
+          ls -la build/icon.icns || echo "Warning: icon.icns not found"
 
       - name: Create temporary package.json
         run: |
@@ -223,40 +221,8 @@ jobs:
       - name: Check out Git repository
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0  # Fetch all history for all branches and tags
+          fetch-depth: 0
         timeout-minutes: 5
-
-      - name: Generate cache key
-        id: cache-key
-        run: |
-          $rootPkgHash = (Get-FileHash -Path package.json -Algorithm SHA256).Hash
-          $rendererPkgHash = (Get-FileHash -Path src/renderer/package.json -Algorithm SHA256).Hash
-          echo "root_pkg_hash=$rootPkgHash" >> $env:GITHUB_OUTPUT
-          echo "renderer_pkg_hash=$rendererPkgHash" >> $env:GITHUB_OUTPUT
-
-      - name: Cache npm
-        uses: actions/cache@v4
-        with:
-          path: ~/.npm
-          key: npm-cache-${{ steps.cache-key.outputs.root_pkg_hash }}-${{ steps.cache-key.outputs.renderer_pkg_hash }}
-          restore-keys: |
-            npm-cache-
-
-      - name: Cache root node_modules
-        uses: actions/cache@v4
-        with:
-          path: node_modules
-          key: root-modules-${{ steps.cache-key.outputs.root_pkg_hash }}
-          restore-keys: |
-            root-modules-
-
-      - name: Cache renderer node_modules
-        uses: actions/cache@v4
-        with:
-          path: src/renderer/node_modules
-          key: renderer-modules-${{ steps.cache-key.outputs.renderer_pkg_hash }}
-          restore-keys: |
-            renderer-modules-
 
       - name: Download build artifacts
         uses: actions/download-artifact@v4
@@ -266,9 +232,16 @@ jobs:
 
       - name: Setup workspace
         run: |
-          Remove-Item -Path build,dist-win -Recurse -Force -ErrorAction SilentlyContinue
-          New-Item -ItemType Directory -Force -Path build
+          # Create a clean workspace
+          Remove-Item -Path dist-win -Recurse -Force -ErrorAction SilentlyContinue
           New-Item -ItemType Directory -Force -Path dist-win
+          # Remove any existing build directory and create junction to platform-specific one
+          Remove-Item -Path build -Recurse -Force -ErrorAction SilentlyContinue
+          New-Item -ItemType SymbolicLink -Path build -Target build-win
+          # Verify critical files exist
+          Get-ChildItem -Path build -Force
+          Get-ChildItem -Path build/flow-dependencies -Force -ErrorAction SilentlyContinue
+          if (-not (Test-Path build/icon.icns)) { Write-Warning "icon.icns not found" }
 
       - name: Create temporary package.json
         run: |
