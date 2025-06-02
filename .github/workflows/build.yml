@@ -35,7 +35,7 @@ jobs:
           npm install
           cd src/renderer && npm install && cd ../..
 
-      - name: Build and package app
+      - name: Package app
         run: npm run package-app
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
