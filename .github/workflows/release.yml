@@ -13,18 +13,9 @@ permissions:
 
 # Add job timeout
 jobs:
-  build-common:
-    runs-on: macos-latest  # Use macOS for the common build as it can handle both platforms
+  package-macos:
+    runs-on: macos-latest
     timeout-minutes: 30
-    env:
-      ACTIONS_RUNNER_DEBUG: true
-      ACTIONS_STEP_DEBUG: true
-      NPM_CONFIG_FETCH_TIMEOUT: 300000
-      NPM_CONFIG_FETCH_RETRIES: 5
-      NPM_CONFIG_FETCH_RETRY_FACTOR: 2
-      NPM_CONFIG_FETCH_RETRY_MINTIMEOUT: 10000
-      NPM_CONFIG_FETCH_RETRY_MAXTIMEOUT: 60000
-
     steps:
       - name: Check out Git repository
         uses: actions/checkout@v4
@@ -40,237 +31,96 @@ jobs:
             src/renderer/package-lock.json
         timeout-minutes: 5
 
-      - name: Generate cache key
-        id: cache-key
+      - name: Install dependencies
         run: |
-          # Use a consistent method to generate hashes
-          ROOT_PKG_HASH=$(cat package.json | sha256sum | cut -d' ' -f1)
-          RENDERER_PKG_HASH=$(cat src/renderer/package.json | sha256sum | cut -d' ' -f1)
-          echo "root_pkg_hash=$ROOT_PKG_HASH" >> $GITHUB_OUTPUT
-          echo "renderer_pkg_hash=$RENDERER_PKG_HASH" >> $GITHUB_OUTPUT
-          echo "platform=common" >> $GITHUB_OUTPUT
-
-      - name: Cache root node_modules
-        id: root-cache
-        uses: actions/cache@v4
-        with:
-          path: node_modules
-          key: root-modules-${{ steps.cache-key.outputs.platform }}-${{ steps.cache-key.outputs.root_pkg_hash }}
-          restore-keys: |
-            root-modules-${{ steps.cache-key.outputs.platform }}-
-            root-modules-
-
-      - name: Cache renderer node_modules
-        id: renderer-cache
-        uses: actions/cache@v4
-        with:
-          path: src/renderer/node_modules
-          key: renderer-modules-${{ steps.cache-key.outputs.platform }}-${{ steps.cache-key.outputs.renderer_pkg_hash }}
-          restore-keys: |
-            renderer-modules-${{ steps.cache-key.outputs.platform }}-
-            renderer-modules-
-
-      - name: Install root dependencies
-        if: steps.root-cache.outputs.cache-hit != 'true'
-        run: |
-          echo "Installing root dependencies..."
           npm ci --no-audit --no-fund
+          cd src/renderer && npm ci --no-audit --no-fund --no-progress && cd ../..
         env:
           NODE_OPTIONS: "--max-old-space-size=4096"
 
-      - name: Install renderer dependencies
-        if: steps.renderer-cache.outputs.cache-hit != 'true'
-        run: |
-          cd src/renderer
-          npm ci --no-audit --no-fund --no-progress
-          cd ../..
+      - name: Build and package
+        run: npm run package-app
         env:
           NODE_OPTIONS: "--max-old-space-size=4096"
-
-      - name: Install electron
-        if: steps.root-cache.outputs.cache-hit != 'true'
-        run: |
-          echo "Installing electron..."
-          npm install electron@28.1.0 --save-exact
-        env:
-          NODE_OPTIONS: "--max-old-space-size=4096"
-
-      - name: Prepare flow dependencies
-        if: steps.root-cache.outputs.cache-hit != 'true'
-        run: npm run prepare-flow-deps
-        env:
-          NODE_OPTIONS: "--max-old-space-size=4096"
-
-      - name: Build renderer
-        if: steps.renderer-cache.outputs.cache-hit != 'true'
-        run: |
-          cd src/renderer
-          npm run build
-          cd ../..
-        env:
-          NODE_OPTIONS: "--max-old-space-size=4096"
-          CI: false
-          GENERATE_SOURCEMAP: false
-
-      - name: Build preload script
-        if: steps.root-cache.outputs.cache-hit != 'true'
-        run: npm run build-preload
-
-      - name: Prepare build files
-        run: |
-          # Create platform-specific build directories
-          mkdir -p build-mac build-win
-          # Copy icons and other build resources to both directories
-          cp -r build/icon.icns build/icon.png build/icon.ico build/entitlements.mac.plist build-mac/ || true
-          cp -r build/icon.icns build/icon.png build/icon.ico build/entitlements.mac.plist build-win/ || true
-          # Ensure flow dependencies are prepared in both directories
-          npm run prepare-flow-deps
-          for dir in build-mac build-win; do
-            rm -rf $dir/flow-dependencies
-            mkdir -p $dir/flow-dependencies
-            cp -r node_modules/aitomics $dir/flow-dependencies/
-            cp -r node_modules/csv-parse $dir/flow-dependencies/
-            cp -r node_modules/node-fetch $dir/flow-dependencies/
-            cp -r node_modules/@monaco-editor $dir/flow-dependencies/
-            cp -r node_modules/react-markdown $dir/flow-dependencies/
-            cp -r node_modules/node/bin/node $dir/flow-dependencies/
-          done
-
-      - name: Upload build artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: build-artifacts
-          path: |
-            src/renderer/build
-            src/renderer/src/preload.js
-            src/renderer/public
-            build-mac
-            build-win
-            node_modules
-            package.json
-            package-lock.json
-            main.js
-            scripts
-          retention-days: 1
-
-  package-macos:
-    needs: build-common
-    runs-on: macos-latest
-    timeout-minutes: 30
-    steps:
-      - name: Check out Git repository
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-        timeout-minutes: 5
-
-      - name: Download build artifacts
-        uses: actions/download-artifact@v4
-        with:
-          name: build-artifacts
-          path: .
-
-      - name: Setup workspace
-        run: |
-          # Create a clean workspace
-          rm -rf dist-mac
-          mkdir -p dist-mac
-          # Remove any existing build directory and symlink the platform-specific one
-          rm -rf build
-          ln -s build-mac build
-          # Verify critical files exist
-          ls -la build/
-          ls -la build/flow-dependencies/
-          ls -la build/icon.icns || echo "Warning: icon.icns not found"
-
-      - name: Create temporary package.json
-        run: |
-          cp package.json package.json.bak
-          jq '.build.directories.output = "dist-mac" | .scripts.build = "echo Skipping build as it was already done in build-common"' package.json > package.json.tmp
-          mv package.json.tmp package.json
-
-      - name: Install electron-builder
-        run: npm install -g electron-builder@26.0.12
-
-      - name: Build/Release Electron app
-        uses: samuelmeuli/action-electron-builder@v1
-        with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          release: ${{ startsWith(github.ref, 'refs/tags/v') }}
-          args: --mac --publish always --dir
-          package_root: .
-          skip_build: true
-        env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           NODE_ENV: production
           ELECTRON_BUILDER_ALLOW_UNRESOLVED_DEPENDENCIES: true
           ELECTRON_VERSION: "28.1.0"
 
-      - name: Restore package.json
-        if: always()
-        run: |
-          if [ -f package.json.bak ]; then
-            mv package.json.bak package.json
-          fi
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: macos-artifacts
+          path: dist
+          retention-days: 1
 
   package-windows:
-    needs: build-common
     runs-on: windows-latest
     timeout-minutes: 30
     steps:
       - name: Check out Git repository
         uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
         timeout-minutes: 5
 
-      - name: Download build artifacts
-        uses: actions/download-artifact@v4
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
         with:
-          name: build-artifacts
-          path: .
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: |
+            package-lock.json
+            src/renderer/package-lock.json
+        timeout-minutes: 5
 
-      - name: Setup workspace
+      - name: Install dependencies
         run: |
-          # Create a clean workspace
-          Remove-Item -Path dist-win -Recurse -Force -ErrorAction SilentlyContinue
-          New-Item -ItemType Directory -Force -Path dist-win
-          # Remove any existing build directory and create junction to platform-specific one
-          Remove-Item -Path build -Recurse -Force -ErrorAction SilentlyContinue
-          New-Item -ItemType SymbolicLink -Path build -Target build-win
-          # Verify critical files exist
-          Get-ChildItem -Path build -Force
-          Get-ChildItem -Path build/flow-dependencies -Force -ErrorAction SilentlyContinue
-          if (-not (Test-Path build/icon.icns)) { Write-Warning "icon.icns not found" }
-
-      - name: Create temporary package.json
-        run: |
-          Copy-Item -Path package.json -Destination package.json.bak
-          $packageJson = Get-Content package.json | ConvertFrom-Json
-          $packageJson.build.directories.output = "dist-win"
-          $packageJson.scripts.build = "echo Skipping build as it was already done in build-common"
-          $packageJson | ConvertTo-Json -Depth 32 | Set-Content package.json
-
-      - name: Install electron-builder
-        run: npm install -g electron-builder@26.0.12
-
-      - name: Build/Release Electron app
-        uses: samuelmeuli/action-electron-builder@v1
-        with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          release: ${{ startsWith(github.ref, 'refs/tags/v') }}
-          args: --win --publish always --dir
-          package_root: .
-          skip_build: true
+          npm ci --no-audit --no-fund
+          cd src/renderer && npm ci --no-audit --no-fund --no-progress && cd ../..
         env:
+          NODE_OPTIONS: "--max-old-space-size=4096"
+
+      - name: Build and package
+        run: npm run package-app
+        env:
+          NODE_OPTIONS: "--max-old-space-size=4096"
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           NODE_ENV: production
           ELECTRON_BUILDER_ALLOW_UNRESOLVED_DEPENDENCIES: true
           ELECTRON_VERSION: "28.1.0"
 
-      - name: Restore package.json
-        if: always()
-        run: |
-          if (Test-Path package.json.bak) {
-            Move-Item -Path package.json.bak -Destination package.json -Force
-          } 
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-artifacts
+          path: dist
+          retention-days: 1
+
+  release:
+    needs: [package-macos, package-windows]
+    runs-on: macos-latest
+    timeout-minutes: 10
+    steps:
+      - name: Download macOS artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: macos-artifacts
+          path: dist-mac
+
+      - name: Download Windows artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: windows-artifacts
+          path: dist-win
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: |
+            dist-mac/*.dmg
+            dist-mac/*.zip
+            dist-win/*.exe
+            dist-win/*.portable.exe
+          draft: false
+          prerelease: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} 

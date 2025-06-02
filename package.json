@@ -67,26 +67,22 @@
     ],
     "files": [
       "!build/icon.icns",
-      "!main.js",
-      "!src/renderer/public/**/*",
-      "!src/renderer/build/**/*",
+      "main.js",
+      "src/renderer/public/**/*",
+      "src/renderer/build/**/*",
       "!dist/**/*",
       "package.json",
-      "!src/renderer/src/preload.js",
+      "src/renderer/src/preload.js",
       "build/icon.png",
       "build/icon.ico",
-      "!build/flow-dependencies/**/*",
-      "!scripts/**/*",
-      "!node_modules/node/bin/node"
+      "build/flow-dependencies/**/*",
+      "scripts/**/*",
+      "node_modules/node/bin/node"
     ],
     "extraResources": [
       {
         "from": "build/icon.icns",
         "to": "icon.icns"
-      },
-      {
-        "from": "main.js",
-        "to": "main.js"
       },
       {
         "from": "src/renderer/build",
@@ -120,10 +116,6 @@
       {
         "from": "node_modules/node/bin/node",
         "to": "app.asar.unpacked/node"
-      },
-      {
-        "from": "src/renderer/src/preload.js",
-        "to": "app.asar.unpacked/src/renderer/src/preload.js"
       }
     ],
     "directories": {
