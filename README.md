@@ -31,17 +31,18 @@ If you encounter any issues during installation or usage, please check the [Appl
 
 [insert gif]
 
-### 4. Export different formats, including rich data formats from `aitomics` to track changes
+
+### 4. Get detailed feedback during execution
 
 [insert gif]
 
-### 5. Get detailed feedback during execution
 
-[insert gif]
+### In addition....
 
-### 6. Export the code to run yourself or modify it.
-
-[insert gif]
+- Export the code to run yourself or modify it.
+- Export different formats, including rich data formats from `aitomics` to track changes.
+- Create comparisons between multiple data flows, e.g., between sentiment analysis and human codes. 
+- The app comes with a standard project which uses the file [here](https://github.com/sebastiannicolajsen/aitomics-ui/blob/main/data/customer_reviews.json) as input for both flows (you determine your output files).
 
 ## Development Setup
 
