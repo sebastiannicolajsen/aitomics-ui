@@ -1,6 +1,6 @@
 {
   "name": "aitomics-ui",
-  "version": "1.0.0-beta.24",
+  "version": "1.0.0-beta.25",
   "description": "A local application for managing Aitomics projects with a block-based code editor",
   "main": "main.js",
   "scripts": {
