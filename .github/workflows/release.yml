@@ -83,10 +83,19 @@ jobs:
       - name: Install electron-builder
         run: |
           echo "Installing electron-builder..."
+          # Install globally to ensure it's available for npx
+          npm install -g electron-builder@26.0.12
+          # Also install locally for the project
           npm install electron-builder@26.0.12 --save-dev --prefer-offline --no-audit --no-fund --no-package-lock || {
             echo "Electron-builder installation failed!"
             exit 1
           }
+          # Verify installation
+          if ! command -v electron-builder &> /dev/null; then
+            echo "Electron-builder not found in PATH after installation!"
+            exit 1
+          fi
+          echo "Electron-builder installed successfully at $(which electron-builder)"
         timeout-minutes: 2
         env:
           NODE_OPTIONS: "--max-old-space-size=4096"
@@ -165,4 +174,5 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           NODE_ENV: production
           ELECTRON_BUILDER_ALLOW_UNRESOLVED_DEPENDENCIES: true
-          DEBUG: electron-builder 
+          # Remove DEBUG flag to reduce noise
+          # DEBUG: electron-builder 
