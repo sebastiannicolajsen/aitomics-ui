@@ -85,12 +85,30 @@ jobs:
           echo "Cache primary key: ${{ steps.root-cache.outputs.cache-primary-key }}"
           echo "Cache matched key: ${{ steps.root-cache.outputs.cache-matched-key }}"
           
-          # Always do a fresh install for now to debug caching
-          echo "Performing fresh install..."
-          npm ci --prefer-offline --no-audit --no-fund || {
+          # Clean install to ensure fresh state
+          echo "Cleaning node_modules..."
+          rm -rf node_modules package-lock.json
+          
+          # Use npm install to update dependencies
+          echo "Installing dependencies..."
+          npm install --no-audit --no-fund --no-package-lock || {
             echo "Root dependencies installation failed!"
             exit 1
           }
+          
+          # Generate fresh package-lock.json
+          echo "Generating package-lock.json..."
+          npm install --package-lock-only || {
+            echo "Failed to generate package-lock.json!"
+            exit 1
+          }
+          
+          # Verify the installation
+          echo "Verifying installation..."
+          if [ ! -d "node_modules" ]; then
+            echo "node_modules directory not found after installation!"
+            exit 1
+          fi
           
           # List installed modules for debugging
           echo "Installed modules:"
@@ -107,10 +125,21 @@ jobs:
           echo "Cache primary key: ${{ steps.renderer-cache.outputs.cache-primary-key }}"
           echo "Cache matched key: ${{ steps.renderer-cache.outputs.cache-matched-key }}"
           
-          # Use npm install to update the lock file
-          echo "Updating dependencies and lock file..."
-          npm install --no-audit --no-fund || {
+          # Clean install to ensure fresh state
+          echo "Cleaning node_modules..."
+          rm -rf node_modules package-lock.json
+          
+          # Use npm install to update dependencies
+          echo "Installing dependencies..."
+          npm install --no-audit --no-fund --no-package-lock || {
             echo "Renderer dependencies installation failed!"
+            exit 1
+          }
+          
+          # Generate fresh package-lock.json
+          echo "Generating package-lock.json..."
+          npm install --package-lock-only || {
+            echo "Failed to generate package-lock.json!"
             exit 1
           }
           
