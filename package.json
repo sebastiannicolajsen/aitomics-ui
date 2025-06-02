@@ -1,6 +1,6 @@
 {
   "name": "aitomics-ui",
-  "version": "1.0.0-beta.61",
+  "version": "1.0.0-beta.62",
   "description": "A local application for managing Aitomics projects with a block-based code editor",
   "main": "main.js",
   "scripts": {
@@ -69,17 +69,15 @@
       "!build/icon.icns",
       "!main.js",
       "!src/renderer/public/**/*",
-      "build/**/*",
-      "dist/**/*",
-      "src/renderer/build/**/*",
+      "!src/renderer/build/**/*",
+      "!dist/**/*",
       "package.json",
-      "src/renderer/src/preload.js",
-      "build/icon.icns",
+      "!src/renderer/src/preload.js",
       "build/icon.png",
       "build/icon.ico",
-      "build/flow-dependencies/**/*",
-      "scripts/**/*",
-      "node_modules/node/bin/node"
+      "!build/flow-dependencies/**/*",
+      "!scripts/**/*",
+      "!node_modules/node/bin/node"
     ],
     "extraResources": [
       {
@@ -122,6 +120,10 @@
       {
         "from": "node_modules/node/bin/node",
         "to": "app.asar.unpacked/node"
+      },
+      {
+        "from": "src/renderer/src/preload.js",
+        "to": "app.asar.unpacked/src/renderer/src/preload.js"
       }
     ],
     "directories": {
