@@ -1,6 +1,6 @@
 {
   "name": "aitomics-ui",
-  "version": "1.0.0-beta.4",
+  "version": "1.0.0-beta.5",
   "description": "A local application for managing Aitomics projects with a block-based code editor",
   "main": "main.js",
   "scripts": {
@@ -91,8 +91,7 @@
     ],
     "directories": {
       "buildResources": "build",
-      "output": "dist",
-      "app": "."
+      "output": "dist"
     },
     "asar": true,
     "asarUnpack": [
