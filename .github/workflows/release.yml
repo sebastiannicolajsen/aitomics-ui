@@ -181,16 +181,16 @@ jobs:
 
       - name: Setup workspace
         run: |
-          mkdir -p build dist
-
-      - name: Install electron-builder
-        run: npm install -g electron-builder@26.0.12
+          mkdir -p build dist-mac
 
       - name: Create temporary package.json
         run: |
           cp package.json package.json.bak
-          jq '.scripts.build = "echo Skipping build as it was already done in build-common"' package.json > package.json.tmp
+          jq '.build.directories.output = "dist-mac" | .scripts.build = "echo Skipping build as it was already done in build-common"' package.json > package.json.tmp
           mv package.json.tmp package.json
+
+      - name: Install electron-builder
+        run: npm install -g electron-builder@26.0.12
 
       - name: Build/Release Electron app
         uses: samuelmeuli/action-electron-builder@v1
@@ -262,15 +262,16 @@ jobs:
       - name: Setup workspace
         run: |
           New-Item -ItemType Directory -Force -Path build
-          New-Item -ItemType Directory -Force -Path dist
-
-      - name: Install electron-builder
-        run: npm install -g electron-builder@26.0.12
+          New-Item -ItemType Directory -Force -Path dist-win
 
       - name: Create temporary package.json
         run: |
           copy package.json package.json.bak
+          powershell -Command "(Get-Content package.json) -replace '\"directories\":\s*{[^}]*}', '\"directories\": { \"output\": \"dist-win\" }' | Set-Content package.json"
           powershell -Command "(Get-Content package.json) -replace '\"build\": \".*\"', '\"build\": \"echo Skipping build as it was already done in build-common\"' | Set-Content package.json"
+
+      - name: Install electron-builder
+        run: npm install -g electron-builder@26.0.12
 
       - name: Build/Release Electron app
         uses: samuelmeuli/action-electron-builder@v1
