@@ -11,9 +11,12 @@ permissions:
   packages: write  # Required for publishing packages
   discussions: write  # Required for creating release discussions
 
+# Add job timeout
 jobs:
   release:
     runs-on: ${{ matrix.os }}
+    # Add timeout-minutes at the job level
+    timeout-minutes: 60
 
     strategy:
       matrix:
@@ -22,52 +25,77 @@ jobs:
     steps:
       - name: Check out Git repository
         uses: actions/checkout@v3
+        timeout-minutes: 5
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
+        timeout-minutes: 5
         with:
           node-version: '20'
-          cache: 'npm'
-          cache-dependency-path: |
-            **/package-lock.json
-            **/package.json
+          # Remove the built-in npm cache as we're using our own
+          cache: ''
+
+      - name: Debug cache paths
+        run: |
+          echo "Current directory: $(pwd)"
+          echo "Listing package files:"
+          ls -la package*.json
+          echo "Listing renderer package files:"
+          ls -la src/renderer/package*.json
+          echo "Cache key for root: ${{ runner.os }}-root-modules-${{ hashFiles('package-lock.json') }}"
+          echo "Cache key for renderer: ${{ runner.os }}-renderer-modules-${{ hashFiles('src/renderer/package-lock.json') }}"
+        timeout-minutes: 2
 
       - name: Cache root node_modules
         uses: actions/cache@v3
+        timeout-minutes: 5
         id: root-cache
+        continue-on-error: true
         with:
-          path: node_modules
+          path: |
+            node_modules
+            ~/.npm
           key: ${{ runner.os }}-root-modules-${{ hashFiles('package-lock.json') }}
           restore-keys: |
             ${{ runner.os }}-root-modules-
         env:
           ACTIONS_CACHE_DEBUG: true
+          ACTIONS_RUNNER_DEBUG: true
 
       - name: Cache renderer node_modules
         uses: actions/cache@v3
+        timeout-minutes: 5
         id: renderer-cache
+        continue-on-error: true
         with:
-          path: src/renderer/node_modules
+          path: |
+            src/renderer/node_modules
+            ~/.npm
           key: ${{ runner.os }}-renderer-modules-${{ hashFiles('src/renderer/package-lock.json') }}
           restore-keys: |
             ${{ runner.os }}-renderer-modules-
         env:
           ACTIONS_CACHE_DEBUG: true
+          ACTIONS_RUNNER_DEBUG: true
 
       - name: Install root dependencies
         run: |
           echo "Installing root dependencies..."
-          echo "Cache hit: ${{ steps.root-cache.outputs.cache-hit }}"
-          if [ "${{ steps.root-cache.outputs.cache-hit }}" != 'true' ]; then
-            echo "Cache miss - installing dependencies..."
-            npm install --prefer-offline --no-audit --no-fund --no-package-lock || {
-              echo "Root dependencies installation failed!"
-              exit 1
-            }
-          else
-            echo "Using cached dependencies"
-          fi
-        timeout-minutes: 5
+          echo "Cache hit status: ${{ steps.root-cache.outputs.cache-hit }}"
+          echo "Cache primary key: ${{ steps.root-cache.outputs.cache-primary-key }}"
+          echo "Cache matched key: ${{ steps.root-cache.outputs.cache-matched-key }}"
+          
+          # Always do a fresh install for now to debug caching
+          echo "Performing fresh install..."
+          npm ci --prefer-offline --no-audit --no-fund || {
+            echo "Root dependencies installation failed!"
+            exit 1
+          }
+          
+          # List installed modules for debugging
+          echo "Installed modules:"
+          ls -la node_modules | head -n 5
+        timeout-minutes: 15
         env:
           NODE_OPTIONS: "--max-old-space-size=4096"
 
@@ -75,24 +103,22 @@ jobs:
         run: |
           cd src/renderer
           echo "Installing renderer dependencies..."
-          echo "Cache hit: ${{ steps.renderer-cache.outputs.cache-hit }}"
-          if [ "${{ steps.renderer-cache.outputs.cache-hit }}" != 'true' ]; then
-            echo "Cache miss - installing dependencies..."
-            # First try to install only production dependencies
-            npm install --prefer-offline --no-audit --no-fund --no-package-lock --production || {
-              echo "Renderer production dependencies installation failed!"
-              exit 1
-            }
-            # Then install dev dependencies
-            npm install --prefer-offline --no-audit --no-fund --no-package-lock || {
-              echo "Renderer dev dependencies installation failed!"
-              exit 1
-            }
-          else
-            echo "Using cached dependencies"
-          fi
+          echo "Cache hit status: ${{ steps.renderer-cache.outputs.cache-hit }}"
+          echo "Cache primary key: ${{ steps.renderer-cache.outputs.cache-primary-key }}"
+          echo "Cache matched key: ${{ steps.renderer-cache.outputs.cache-matched-key }}"
+          
+          # Always do a fresh install for now to debug caching
+          echo "Performing fresh install..."
+          npm ci --prefer-offline --no-audit --no-fund || {
+            echo "Renderer dependencies installation failed!"
+            exit 1
+          }
+          
+          # List installed modules for debugging
+          echo "Installed modules:"
+          ls -la node_modules | head -n 5
           cd ../..
-        timeout-minutes: 10
+        timeout-minutes: 15
         env:
           NODE_OPTIONS: "--max-old-space-size=4096"
 
