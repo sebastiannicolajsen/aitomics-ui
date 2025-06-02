@@ -145,14 +145,13 @@ jobs:
           ACTIONS_CACHE_DEBUG: true
           ACTIONS_RUNNER_DEBUG: true
 
-      - name: Install dependencies
+      - name: Install root dependencies
+        run: npm install --no-audit --no-fund
+        env:
+          NODE_OPTIONS: "--max-old-space-size=4096"
+
+      - name: Install renderer dependencies
         run: |
-          # Install root dependencies
-          echo "Installing root dependencies..."
-          npm install --no-audit --no-fund
-          
-          # Install renderer dependencies
-          echo "Installing renderer dependencies..."
           cd src/renderer
           npm install --no-audit --no-fund
           cd ../..
