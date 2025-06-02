@@ -37,29 +37,37 @@ jobs:
           cache: ''
         timeout-minutes: 5
 
+      - name: Generate cache key
+        id: cache-key
+        run: |
+          ROOT_PKG_HASH=$(sha256sum package.json | cut -d' ' -f1)
+          RENDERER_PKG_HASH=$(sha256sum src/renderer/package.json | cut -d' ' -f1)
+          echo "root_pkg_hash=$ROOT_PKG_HASH" >> $GITHUB_OUTPUT
+          echo "renderer_pkg_hash=$RENDERER_PKG_HASH" >> $GITHUB_OUTPUT
+
       - name: Cache npm
         uses: actions/cache@v4
         with:
           path: ~/.npm
-          key: ${{ runner.os }}-npm-cache-${{ hashFiles('**/package-lock.json') }}
+          key: npm-cache-${{ steps.cache-key.outputs.root_pkg_hash }}-${{ steps.cache-key.outputs.renderer_pkg_hash }}
           restore-keys: |
-            ${{ runner.os }}-npm-cache-
+            npm-cache-
 
       - name: Cache root node_modules
         uses: actions/cache@v4
         with:
           path: node_modules
-          key: ${{ runner.os }}-root-modules-${{ hashFiles('package-lock.json') }}
+          key: root-modules-${{ steps.cache-key.outputs.root_pkg_hash }}
           restore-keys: |
-            ${{ runner.os }}-root-modules-
+            root-modules-
 
       - name: Cache renderer node_modules
         uses: actions/cache@v4
         with:
           path: src/renderer/node_modules
-          key: ${{ runner.os }}-renderer-modules-${{ hashFiles('src/renderer/package-lock.json') }}
+          key: renderer-modules-${{ steps.cache-key.outputs.renderer_pkg_hash }}
           restore-keys: |
-            ${{ runner.os }}-renderer-modules-
+            renderer-modules-
 
       - name: Install root dependencies
         if: steps.root-cache.outputs.cache-hit != 'true'
@@ -110,16 +118,61 @@ jobs:
           path: |
             src/renderer/build
             src/renderer/src/preload.js
+            src/renderer/public
             build/flow-dependencies
+            build/icon.icns
+            build/icon.png
+            build/icon.ico
+            build/entitlements.mac.plist
             node_modules
             package.json
             package-lock.json
+            main.js
+            scripts
 
   package-macos:
     needs: build-common
     runs-on: macos-latest
     timeout-minutes: 30
     steps:
+      - name: Check out Git repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Fetch all history for all branches and tags
+        timeout-minutes: 5
+
+      - name: Generate cache key
+        id: cache-key
+        run: |
+          ROOT_PKG_HASH=$(sha256sum package.json | cut -d' ' -f1)
+          RENDERER_PKG_HASH=$(sha256sum src/renderer/package.json | cut -d' ' -f1)
+          echo "root_pkg_hash=$ROOT_PKG_HASH" >> $GITHUB_OUTPUT
+          echo "renderer_pkg_hash=$RENDERER_PKG_HASH" >> $GITHUB_OUTPUT
+
+      - name: Cache npm
+        uses: actions/cache@v4
+        with:
+          path: ~/.npm
+          key: npm-cache-${{ steps.cache-key.outputs.root_pkg_hash }}-${{ steps.cache-key.outputs.renderer_pkg_hash }}
+          restore-keys: |
+            npm-cache-
+
+      - name: Cache root node_modules
+        uses: actions/cache@v4
+        with:
+          path: node_modules
+          key: root-modules-${{ steps.cache-key.outputs.root_pkg_hash }}
+          restore-keys: |
+            root-modules-
+
+      - name: Cache renderer node_modules
+        uses: actions/cache@v4
+        with:
+          path: src/renderer/node_modules
+          key: renderer-modules-${{ steps.cache-key.outputs.renderer_pkg_hash }}
+          restore-keys: |
+            renderer-modules-
+
       - name: Download build artifacts
         uses: actions/download-artifact@v4
         with:
@@ -162,6 +215,44 @@ jobs:
     runs-on: windows-latest
     timeout-minutes: 30
     steps:
+      - name: Check out Git repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Fetch all history for all branches and tags
+        timeout-minutes: 5
+
+      - name: Generate cache key
+        id: cache-key
+        run: |
+          $rootPkgHash = (Get-FileHash -Path package.json -Algorithm SHA256).Hash
+          $rendererPkgHash = (Get-FileHash -Path src/renderer/package.json -Algorithm SHA256).Hash
+          echo "root_pkg_hash=$rootPkgHash" >> $env:GITHUB_OUTPUT
+          echo "renderer_pkg_hash=$rendererPkgHash" >> $env:GITHUB_OUTPUT
+
+      - name: Cache npm
+        uses: actions/cache@v4
+        with:
+          path: ~/.npm
+          key: npm-cache-${{ steps.cache-key.outputs.root_pkg_hash }}-${{ steps.cache-key.outputs.renderer_pkg_hash }}
+          restore-keys: |
+            npm-cache-
+
+      - name: Cache root node_modules
+        uses: actions/cache@v4
+        with:
+          path: node_modules
+          key: root-modules-${{ steps.cache-key.outputs.root_pkg_hash }}
+          restore-keys: |
+            root-modules-
+
+      - name: Cache renderer node_modules
+        uses: actions/cache@v4
+        with:
+          path: src/renderer/node_modules
+          key: renderer-modules-${{ steps.cache-key.outputs.renderer_pkg_hash }}
+          restore-keys: |
+            renderer-modules-
+
       - name: Download build artifacts
         uses: actions/download-artifact@v4
         with:
