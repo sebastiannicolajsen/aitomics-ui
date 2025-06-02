@@ -32,49 +32,65 @@ jobs:
             **/package-lock.json
             **/package.json
 
-      - name: Cache node_modules
+      - name: Cache root node_modules
         uses: actions/cache@v3
+        id: root-cache
         with:
-          path: |
-            **/node_modules
-            node_modules
-          key: ${{ runner.os }}-modules-${{ hashFiles('**/package-lock.json') }}
+          path: node_modules
+          key: ${{ runner.os }}-root-modules-${{ hashFiles('package-lock.json') }}
           restore-keys: |
-            ${{ runner.os }}-modules-
-
-      - name: Install root dependencies
-        run: |
-          echo "Installing root dependencies..."
-          npm install --prefer-offline --no-audit --no-fund --no-package-lock || {
-            echo "Root dependencies installation failed!"
-            exit 1
-          }
-        timeout-minutes: 5
+            ${{ runner.os }}-root-modules-
         env:
-          NODE_OPTIONS: "--max-old-space-size=4096"
+          ACTIONS_CACHE_DEBUG: true
 
       - name: Cache renderer node_modules
         uses: actions/cache@v3
+        id: renderer-cache
         with:
           path: src/renderer/node_modules
           key: ${{ runner.os }}-renderer-modules-${{ hashFiles('src/renderer/package-lock.json') }}
           restore-keys: |
             ${{ runner.os }}-renderer-modules-
+        env:
+          ACTIONS_CACHE_DEBUG: true
+
+      - name: Install root dependencies
+        run: |
+          echo "Installing root dependencies..."
+          echo "Cache hit: ${{ steps.root-cache.outputs.cache-hit }}"
+          if [ "${{ steps.root-cache.outputs.cache-hit }}" != 'true' ]; then
+            echo "Cache miss - installing dependencies..."
+            npm install --prefer-offline --no-audit --no-fund --no-package-lock || {
+              echo "Root dependencies installation failed!"
+              exit 1
+            }
+          else
+            echo "Using cached dependencies"
+          fi
+        timeout-minutes: 5
+        env:
+          NODE_OPTIONS: "--max-old-space-size=4096"
 
       - name: Install renderer dependencies
         run: |
           cd src/renderer
           echo "Installing renderer dependencies..."
-          # First try to install only production dependencies
-          npm install --prefer-offline --no-audit --no-fund --no-package-lock --production || {
-            echo "Renderer production dependencies installation failed!"
-            exit 1
-          }
-          # Then install dev dependencies
-          npm install --prefer-offline --no-audit --no-fund --no-package-lock || {
-            echo "Renderer dev dependencies installation failed!"
-            exit 1
-          }
+          echo "Cache hit: ${{ steps.renderer-cache.outputs.cache-hit }}"
+          if [ "${{ steps.renderer-cache.outputs.cache-hit }}" != 'true' ]; then
+            echo "Cache miss - installing dependencies..."
+            # First try to install only production dependencies
+            npm install --prefer-offline --no-audit --no-fund --no-package-lock --production || {
+              echo "Renderer production dependencies installation failed!"
+              exit 1
+            }
+            # Then install dev dependencies
+            npm install --prefer-offline --no-audit --no-fund --no-package-lock || {
+              echo "Renderer dev dependencies installation failed!"
+              exit 1
+            }
+          else
+            echo "Using cached dependencies"
+          fi
           cd ../..
         timeout-minutes: 10
         env:
