@@ -44,18 +44,36 @@ jobs:
 
       - name: Install dependencies
         run: |
-          echo "Installing root dependencies..."
-          npm install --prefer-offline --no-audit
-          echo "Installing renderer dependencies..."
+          echo "Step 1/4: Installing root dependencies..."
+          npm install --prefer-offline --no-audit --no-fund || {
+            echo "Root dependencies installation failed!"
+            exit 1
+          }
+          
+          echo "Step 2/4: Installing renderer dependencies..."
           cd src/renderer
           rm -rf node_modules package-lock.json
-          npm install --prefer-offline --no-audit
+          npm install --prefer-offline --no-audit --no-fund || {
+            echo "Renderer dependencies installation failed!"
+            exit 1
+          }
           cd ../..
-          echo "Installing electron-builder..."
-          npm install electron-builder@26.0.12 --save-dev --prefer-offline --no-audit
-          echo "Final dependency sync..."
-          npm install --prefer-offline --no-audit
-        timeout-minutes: 10
+          
+          echo "Step 3/4: Installing electron-builder..."
+          npm install electron-builder@26.0.12 --save-dev --prefer-offline --no-audit --no-fund || {
+            echo "Electron-builder installation failed!"
+            exit 1
+          }
+          
+          echo "Step 4/4: Verifying installations..."
+          if [ ! -d "node_modules" ] || [ ! -d "src/renderer/node_modules" ]; then
+            echo "Installation verification failed! Required node_modules directories not found."
+            exit 1
+          fi
+          echo "All dependencies installed successfully!"
+        timeout-minutes: 15
+        env:
+          NODE_OPTIONS: "--max-old-space-size=4096"
 
       - name: Build renderer
         run: |
