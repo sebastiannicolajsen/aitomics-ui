@@ -30,10 +30,30 @@ jobs:
           node-version: '20'
           cache: 'npm'
 
+      - name: Debug initial state
+        run: |
+          echo "Current directory: $(pwd)"
+          echo "Listing build directory:"
+          ls -la build/ || echo "build directory doesn't exist"
+          echo "Listing dist directory:"
+          ls -la dist/ || echo "dist directory doesn't exist"
+          echo "Listing icon file:"
+          ls -la build/icon.icns || echo "icon.icns doesn't exist"
+
       - name: Install dependencies
         run: |
           npm install
           cd src/renderer && npm install && cd ../..
+
+      - name: Debug pre-build state
+        run: |
+          echo "Current directory: $(pwd)"
+          echo "Listing build directory:"
+          ls -la build/ || echo "build directory doesn't exist"
+          echo "Listing dist directory:"
+          ls -la dist/ || echo "dist directory doesn't exist"
+          echo "Listing icon file:"
+          ls -la build/icon.icns || echo "icon.icns doesn't exist"
 
       - name: Package app
         run: npm run package-app
@@ -41,6 +61,16 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           ELECTRON_BUILDER_ALLOW_UNRESOLVED_DEPENDENCIES: true
           ELECTRON_VERSION: "28.1.0"
+
+      - name: Debug post-build state
+        run: |
+          echo "Current directory: $(pwd)"
+          echo "Listing build directory:"
+          ls -la build/ || echo "build directory doesn't exist"
+          echo "Listing dist directory:"
+          ls -la dist/ || echo "dist directory doesn't exist"
+          echo "Listing icon file:"
+          ls -la build/icon.icns || echo "icon.icns doesn't exist"
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
