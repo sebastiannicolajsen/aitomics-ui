@@ -60,7 +60,17 @@
       "gatekeeperAssess": false,
       "entitlements": "build/entitlements.mac.plist",
       "entitlementsInherit": "build/entitlements.mac.plist",
-      "identity": null
+      "identity": null,
+      "artifactName": "${productName}-${version}-${arch}.${ext}",
+      "files": [
+        "!build/icon.icns"
+      ],
+      "extraResources": [
+        {
+          "from": "build/icon.icns",
+          "to": "icon.icns"
+        }
+      ]
     },
     "win": {
       "target": [

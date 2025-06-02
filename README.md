@@ -20,21 +20,19 @@ If you encounter any issues during installation or usage, please check the [Appl
 
 ### 1. Create flows for handling analysis of various data sources
 
-
-[insert gif]
+![Create flows](docs/media/aitomics-1.gif)
 
 ### 2. Create custom actions using aitomics or pure javascript
 
-[insert gif]
+![Custom actions](docs/media/aitomics-2.gif)
 
 ### 3. Execute your flows using various llms
 
-[insert gif]
-
+![Execute flows](docs/media/aitomics-3.gif)
 
 ### 4. Get detailed feedback during execution
 
-[insert gif]
+![Execution feedback](docs/media/aitomics-4.gif)
 
 
 ### In addition....
