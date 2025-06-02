@@ -191,6 +191,11 @@ jobs:
         env:
           NODE_OPTIONS: "--max-old-space-size=4096"
 
+      - name: Prepare flow dependencies
+        run: npm run prepare-flow-deps
+        env:
+          NODE_OPTIONS: "--max-old-space-size=4096"
+
       - name: Build renderer
         run: |
           cd src/renderer
@@ -398,6 +403,12 @@ jobs:
           npm install electron@28.1.0 --save-exact
           echo "Verifying electron installation..."
           npm list electron
+        env:
+          NODE_OPTIONS: "--max-old-space-size=4096"
+
+      - name: Prepare flow dependencies
+        shell: pwsh  # Explicitly use PowerShell for Windows
+        run: npm run prepare-flow-deps
         env:
           NODE_OPTIONS: "--max-old-space-size=4096"
 
