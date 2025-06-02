@@ -106,9 +106,15 @@ jobs:
         run: |
           echo "Current directory: $(pwd)"
           echo "Listing package files:"
-          ls -la package*.json
-          echo "Listing renderer package files:"
-          ls -la src/renderer/package*.json
+          if [ "$RUNNER_OS" == "Windows" ]; then
+            dir package*.json
+            echo "Listing renderer package files:"
+            dir src\renderer\package*.json
+          else
+            ls -la package*.json
+            echo "Listing renderer package files:"
+            ls -la src/renderer/package*.json
+          fi
           echo "Cache key for root: ${{ runner.os }}-root-modules-${{ hashFiles('package-lock.json') }}"
           echo "Cache key for renderer: ${{ runner.os }}-renderer-modules-${{ hashFiles('src/renderer/package-lock.json') }}"
         timeout-minutes: 2
@@ -155,18 +161,29 @@ jobs:
           echo "Starting renderer dependencies installation..."
           echo "Current directory: $(pwd)"
           echo "Listing src/renderer contents:"
-          ls -la src/renderer
-          
-          cd src/renderer
-          echo "Changed to renderer directory: $(pwd)"
-          echo "Listing package files:"
-          ls -la package*.json
+          if [ "$RUNNER_OS" == "Windows" ]; then
+            dir src\renderer
+            cd src\renderer
+            echo "Changed to renderer directory: $(pwd)"
+            echo "Listing package files:"
+            dir package*.json
+          else
+            ls -la src/renderer
+            cd src/renderer
+            echo "Changed to renderer directory: $(pwd)"
+            echo "Listing package files:"
+            ls -la package*.json
+          fi
           
           echo "Installing dependencies..."
           npm install --no-audit --no-fund --verbose
           
           echo "Installation complete. Listing node_modules:"
-          ls -la node_modules | head -n 5
+          if [ "$RUNNER_OS" == "Windows" ]; then
+            dir node_modules | Select-Object -First 5
+          else
+            ls -la node_modules | head -n 5
+          fi
           cd ../..
         env:
           NODE_OPTIONS: "--max-old-space-size=4096"
