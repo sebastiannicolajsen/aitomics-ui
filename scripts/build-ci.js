@@ -10,6 +10,22 @@ process.env.NODE_OPTIONS = '--max-old-space-size=4096';
 process.env.NPM_CONFIG_FETCH_TIMEOUT = '300000';
 process.env.NPM_CONFIG_FETCH_RETRIES = '5';
 
+// Set electron-builder specific environment variables
+if (os.platform() === 'darwin') {
+    process.env.ELECTRON_BUILDER_ARCH = 'arm64';
+    process.env.ELECTRON_BUILDER_PLATFORM = 'darwin';
+} else if (os.platform() === 'win32') {
+    process.env.ELECTRON_BUILDER_ARCH = 'x64';
+    process.env.ELECTRON_BUILDER_PLATFORM = 'win32';
+}
+process.env.ELECTRON_BUILDER_APP_DIR = './';
+process.env.ELECTRON_BUILDER_BUILD_FROM_SOURCE = 'false';
+
+// Add renderer build environment variables
+process.env.CI = 'false';
+process.env.GENERATE_SOURCEMAP = 'false';
+process.env.DISABLE_ESLINT_PLUGIN = 'true';
+
 // Function to clean dist directory
 function cleanDist() {
     const distPath = path.join(process.cwd(), 'dist');

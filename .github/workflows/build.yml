@@ -45,11 +45,22 @@ jobs:
       - name: Prepare macOS build environment
         if: matrix.os == 'macos-latest'
         run: |
-          # Only clean dist directory, preserve build directory
+          # Clean dist directory
           rm -rf dist/
-          # Handle icon file if it exists
-          if [ -f build/icon.icns ]; then
-            chmod 644 build/icon.icns
+          
+          # Ensure all public assets have correct permissions
+          chmod -R 644 build/icon.* || true
+          chmod -R 644 src/renderer/public/* || true
+          
+          # Ensure build directory exists
+          mkdir -p build
+          
+          # Copy public assets to build directory if they don't exist
+          if [ ! -f build/icon.png ]; then
+            cp src/renderer/public/logo512.png build/icon.png
+          fi
+          if [ ! -f build/icon.ico ]; then
+            cp src/renderer/public/favicon.ico build/icon.ico
           fi
 
       - name: Build macOS app
