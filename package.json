@@ -49,6 +49,41 @@
       "owner": "sebastiannicolajsen",
       "repo": "aitomics-ui"
     },
+    "asar": {
+      "smartUnpack": true,
+      "unpackDir": "build/flow-dependencies/**/*"
+    },
+    "files": [
+      "!build/icon.icns",
+      "!main.js",
+      "build/**/*",
+      "dist/**/*",
+      "src/renderer/build/**/*",
+      "src/renderer/public/**/*",
+      "package.json",
+      "src/renderer/src/preload.js",
+      "build/icon.icns",
+      "build/icon.png",
+      "build/icon.ico",
+      "build/flow-dependencies/**/*",
+      "scripts/**/*",
+      "node_modules/node/bin/node"
+    ],
+    "extraResources": [
+      {
+        "from": "build/icon.icns",
+        "to": "icon.icns"
+      },
+      {
+        "from": "main.js",
+        "to": "main.js"
+      }
+    ],
+    "directories": {
+      "buildResources": "build",
+      "output": "dist",
+      "app": "."
+    },
     "mac": {
       "icon": "build/icon.icns",
       "category": "public.app-category.developer-tools",
@@ -83,88 +118,6 @@
       "oneClick": false,
       "allowToChangeInstallationDirectory": true,
       "createDesktopShortcut": true
-    },
-    "files": [
-      "build/**/*",
-      "dist/**/*",
-      "src/renderer/build/**/*",
-      "src/renderer/public/**/*",
-      "main.js",
-      "package.json",
-      "src/renderer/src/preload.js",
-      "build/icon.icns",
-      "build/icon.png",
-      "build/icon.ico",
-      "build/flow-dependencies/**/*",
-      "scripts/**/*",
-      "node_modules/node/bin/node"
-    ],
-    "directories": {
-      "buildResources": "build",
-      "output": "dist",
-      "app": "."
-    },
-    "asar": true,
-    "asarUnpack": [
-      "src/renderer/build/**/*",
-      "node_modules/ajv/**/*",
-      "node_modules/conf/**/*",
-      "node_modules/electron-store/**/*",
-      "node_modules/p-limit/**/*",
-      "node_modules/aitomics/**/*",
-      "node_modules/csv-parse/**/*",
-      "node_modules/node-fetch/**/*",
-      "node_modules/@monaco-editor/**/*",
-      "node_modules/react-markdown/**/*",
-      "node_modules/node/bin/node",
-      "build/flow-dependencies/**/*"
-    ],
-    "extraResources": [
-      {
-        "from": "src/renderer/build",
-        "to": "app.asar.unpacked/src/renderer/build",
-        "filter": [
-          "**/*"
-        ]
-      },
-      {
-        "from": "build/flow-dependencies",
-        "to": "app.asar.unpacked/build/flow-dependencies",
-        "filter": [
-          "**/*",
-          "node_modules/**/*"
-        ]
-      },
-      {
-        "from": "build/flow-dependencies/node_modules",
-        "to": "app.asar.unpacked/build/flow-dependencies/node_modules",
-        "filter": [
-          "**/*"
-        ]
-      },
-      {
-        "from": "scripts",
-        "to": "app.asar.unpacked/scripts",
-        "filter": [
-          "**/*"
-        ]
-      },
-      {
-        "from": "build/icon.icns",
-        "to": "icon.icns"
-      },
-      {
-        "from": "build/icon.png",
-        "to": "icon.png"
-      },
-      {
-        "from": "build/icon.ico",
-        "to": "icon.ico"
-      },
-      {
-        "from": "node_modules/node/bin/node",
-        "to": "app.asar.unpacked/node"
-      }
-    ]
+    }
   }
 }
