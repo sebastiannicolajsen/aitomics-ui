@@ -148,11 +148,11 @@ jobs:
       - name: Install dependencies
         run: |
           # Install root dependencies
-          npm install
+          npm ci --no-audit --no-fund --prefer-offline
           
           # Install renderer dependencies
           cd src/renderer
-          npm install
+          npm ci --no-audit --no-fund --prefer-offline
           cd ../..
         env:
           NODE_OPTIONS: "--max-old-space-size=4096"
