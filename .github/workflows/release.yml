@@ -211,12 +211,32 @@ jobs:
 
       - name: Clean dist directory
         run: |
-          echo "Cleaning dist directory..."
-          if ($env:RUNNER_OS -eq "Windows") {
-            if (Test-Path dist) { Remove-Item -Recurse -Force dist }
-          } else {
-            Remove-Item -Recurse -Force dist -ErrorAction SilentlyContinue
+          echo "Cleaning dist directory and app contents..."
+          # Clean dist directory
+          Remove-Item -Recurse -Force dist -ErrorAction SilentlyContinue
+          
+          # Clean the target app directory for macOS
+          if ($env:RUNNER_OS -eq "macOS") {
+            $appPath = "dist/mac-arm64/Aitomics UI.app"
+            if (Test-Path $appPath) {
+              Remove-Item -Recurse -Force $appPath
+            }
+            # Also clean any existing Resources directory
+            $resourcesPath = "dist/mac-arm64/Aitomics UI.app/Contents/Resources"
+            if (Test-Path $resourcesPath) {
+              Remove-Item -Recurse -Force $resourcesPath
+            }
           }
+          
+          # Clean the target app directory for Windows
+          if ($env:RUNNER_OS -eq "Windows") {
+            $winAppPath = "dist/win-unpacked"
+            if (Test-Path $winAppPath) {
+              Remove-Item -Recurse -Force $winAppPath
+            }
+          }
+          
+          echo "Cleanup complete"
         shell: pwsh  # Use PowerShell for both Windows and Unix-like systems
 
       - name: Install electron-builder
@@ -437,12 +457,32 @@ jobs:
 
       - name: Clean dist directory
         run: |
-          echo "Cleaning dist directory..."
-          if ($env:RUNNER_OS -eq "Windows") {
-            if (Test-Path dist) { Remove-Item -Recurse -Force dist }
-          } else {
-            Remove-Item -Recurse -Force dist -ErrorAction SilentlyContinue
+          echo "Cleaning dist directory and app contents..."
+          # Clean dist directory
+          Remove-Item -Recurse -Force dist -ErrorAction SilentlyContinue
+          
+          # Clean the target app directory for macOS
+          if ($env:RUNNER_OS -eq "macOS") {
+            $appPath = "dist/mac-arm64/Aitomics UI.app"
+            if (Test-Path $appPath) {
+              Remove-Item -Recurse -Force $appPath
+            }
+            # Also clean any existing Resources directory
+            $resourcesPath = "dist/mac-arm64/Aitomics UI.app/Contents/Resources"
+            if (Test-Path $resourcesPath) {
+              Remove-Item -Recurse -Force $resourcesPath
+            }
           }
+          
+          # Clean the target app directory for Windows
+          if ($env:RUNNER_OS -eq "Windows") {
+            $winAppPath = "dist/win-unpacked"
+            if (Test-Path $winAppPath) {
+              Remove-Item -Recurse -Force $winAppPath
+            }
+          }
+          
+          echo "Cleanup complete"
         shell: pwsh  # Use PowerShell for both Windows and Unix-like systems
 
       - name: Install electron-builder
