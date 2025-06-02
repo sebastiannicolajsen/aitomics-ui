@@ -31,7 +31,11 @@ jobs:
 
     strategy:
       matrix:
-        os: [macos-latest, windows-latest]
+        include:
+          - os: macos-latest
+            index: 1
+          - os: windows-latest
+            index: 2
 
     steps:
       - name: Check out Git repository
