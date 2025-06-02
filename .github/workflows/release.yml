@@ -168,10 +168,10 @@ jobs:
             ls -la package*.json
           fi
           
-          echo "Installing dependencies..."
-          npm install --no-audit --no-fund --verbose
+          echo "Installing dependencies (this may take a few minutes)..."
+          npm install --no-audit --no-fund --no-progress
           
-          echo "Installation complete. Listing node_modules:"
+          echo "Installation complete. Verifying node_modules..."
           if [ "$RUNNER_OS" == "Windows" ]; then
             dir node_modules | Select-Object -First 5
           else
@@ -193,6 +193,11 @@ jobs:
 
       - name: Build preload script
         run: npm run build-preload
+
+      - name: Install electron-builder
+        run: npm install -g electron-builder@26.0.12
+        env:
+          NODE_OPTIONS: "--max-old-space-size=4096"
 
       - name: Build/Release Electron app
         uses: samuelmeuli/action-electron-builder@v1
@@ -362,10 +367,10 @@ jobs:
             ls -la package*.json
           fi
           
-          echo "Installing dependencies..."
-          npm install --no-audit --no-fund --verbose
+          echo "Installing dependencies (this may take a few minutes)..."
+          npm install --no-audit --no-fund --no-progress
           
-          echo "Installation complete. Listing node_modules:"
+          echo "Installation complete. Verifying node_modules..."
           if [ "$RUNNER_OS" == "Windows" ]; then
             dir node_modules | Select-Object -First 5
           else
@@ -387,6 +392,11 @@ jobs:
 
       - name: Build preload script
         run: npm run build-preload
+
+      - name: Install electron-builder
+        run: npm install -g electron-builder@26.0.12
+        env:
+          NODE_OPTIONS: "--max-old-space-size=4096"
 
       - name: Build/Release Electron app
         uses: samuelmeuli/action-electron-builder@v1
