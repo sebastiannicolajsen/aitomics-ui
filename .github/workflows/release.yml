@@ -145,12 +145,30 @@ jobs:
           ACTIONS_CACHE_DEBUG: true
           ACTIONS_RUNNER_DEBUG: true
 
+      - name: Update dependencies
+        run: |
+          # Update root dependencies and lock file
+          echo "Updating root dependencies..."
+          rm -rf node_modules package-lock.json
+          npm install --package-lock-only --no-audit --no-fund
+          
+          # Update renderer dependencies and lock file
+          echo "Updating renderer dependencies..."
+          cd src/renderer
+          rm -rf node_modules package-lock.json
+          npm install --package-lock-only --no-audit --no-fund
+          cd ../..
+        env:
+          NODE_OPTIONS: "--max-old-space-size=4096"
+
       - name: Install dependencies
         run: |
           # Install root dependencies
+          echo "Installing root dependencies..."
           npm ci --no-audit --no-fund --prefer-offline
           
           # Install renderer dependencies
+          echo "Installing renderer dependencies..."
           cd src/renderer
           npm ci --no-audit --no-fund --prefer-offline
           cd ../..
