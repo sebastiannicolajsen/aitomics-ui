@@ -8,6 +8,73 @@ const Module = require('module');  // Add Module for proper module loading
 const fetch = require('node-fetch');
 const { autoUpdater } = require('electron-updater');
 
+// Get the correct path for the scripts directory
+const scriptsPath = app.isPackaged 
+  ? path.join(process.resourcesPath, 'app.asar.unpacked/scripts')
+  : path.join(__dirname, 'scripts');
+
+// Import prepareDependencies with the correct path
+const { prepareDependencies } = require(path.join(scriptsPath, 'prepare-flow-deps'));
+
+// Set up logging
+let logStream;
+try {
+  const logFile = path.join(app.getPath('userData'), 'app.log');
+  logStream = fs.createWriteStream(logFile, { flags: 'a' });
+  
+  // Store original console methods
+  const originalConsole = {
+    log: console.log.bind(console),
+    error: console.error.bind(console),
+    warn: console.warn.bind(console),
+    debug: console.debug.bind(console)
+  };
+
+  // Create logging function
+  function logToFile(level, ...args) {
+    try {
+      const timestamp = new Date().toISOString();
+      const message = args.map(arg => 
+        typeof arg === 'object' ? JSON.stringify(arg, null, 2) : String(arg)
+      ).join(' ');
+      const logMessage = `[${timestamp}] [${level}] ${message}\n`;
+      
+      // Write to file
+      if (logStream && logStream.writable) {
+        logStream.write(logMessage);
+      }
+      
+      // Call original console method
+      if (typeof originalConsole[level] === 'function') {
+        originalConsole[level](...args);
+      }
+    } catch (err) {
+      // If logging fails, at least try to write to original console
+      if (typeof originalConsole[level] === 'function') {
+        originalConsole[level](...args);
+      }
+    }
+  }
+
+  // Override console methods
+  console.log = (...args) => logToFile('INFO', ...args);
+  console.error = (...args) => logToFile('ERROR', ...args);
+  console.warn = (...args) => logToFile('WARN', ...args);
+  console.debug = (...args) => logToFile('DEBUG', ...args);
+
+  // Log initial app info
+  console.log('Logging initialized');
+  console.log('App paths:', {
+    userData: app.getPath('userData'),
+    appPath: app.getAppPath(),
+    resourcesPath: process.resourcesPath,
+    logFile
+  });
+} catch (err) {
+  // If logging setup fails, at least log the error to the original console
+  console.error('Failed to initialize logging:', err);
+}
+
 // Initialize store for project data
 const store = new Store({
   name: 'projects',
@@ -26,13 +93,18 @@ const appStore = new Store({
   clearInvalidConfig: true
 });
 
-// Set development mode only if not packaged
-if (!app.isPackaged) {
+// Set development mode only if not packaged and NODE_ENV is not explicitly set to production
+if (!app.isPackaged && process.env.NODE_ENV !== 'production') {
   process.env.NODE_ENV = 'development';
+} else {
+  process.env.NODE_ENV = 'production';
 }
+
+console.log('Starting app in mode:', process.env.NODE_ENV);
 
 let mainWindow = null;
 let currentFlowProcess = null;
+let isAppReady = false;
 
 // Configure auto-updater
 autoUpdater.autoDownload = false;
@@ -90,127 +162,188 @@ function registerIpcHandlers() {
     }
 
     try {
-      // Create temporary directory and file
-      const tempDir = path.join(app.getPath('temp'), 'aitomics-flow');
-      fs.mkdirSync(tempDir, { recursive: true });
-      const tempFile = path.join(tempDir, `flow-${Date.now()}.js`);
-
-      // Find the correct node_modules paths
-      const appPath = app.getAppPath();
-      console.log('[FLOW_DEBUG] App path:', appPath);
+      console.log('[FLOW_DEBUG] ===== Starting Flow Execution =====');
       
-      const possibleNodeModulesPaths = [
-        // Development paths (relative to app path)
-        path.join(appPath, 'node_modules'),
-        path.join(appPath, '..', 'node_modules'),
-        // Production paths
-        path.join(process.resourcesPath, 'app.asar', 'node_modules'),
-        path.join(process.resourcesPath, 'app', 'node_modules'),
-        // Fallback paths
-        path.join(__dirname, 'node_modules'),
-        path.join(__dirname, '..', 'node_modules')
-      ];
-
-      console.log('[FLOW_DEBUG] Checking possible node_modules paths:');
-      const validPaths = possibleNodeModulesPaths.filter(p => {
-        const exists = fs.existsSync(p);
-        console.log(`[FLOW_DEBUG] ${p}: ${exists ? 'exists' : 'not found'}`);
-        return exists;
-      });
-
-      if (validPaths.length === 0) {
-        console.error('[FLOW_DEBUG] No valid node_modules paths found. Searched in:', possibleNodeModulesPaths);
-        throw new Error('Could not find node_modules directory. Please ensure dependencies are installed.');
-      }
-
-      const rootNodeModules = validPaths[0];
-      console.log('[FLOW_DEBUG] Using node_modules path:', rootNodeModules);
-
-      // Get package information
-      const csvParsePackagePath = path.join(rootNodeModules, 'csv-parse');
-      const aitomicsPackagePath = path.join(rootNodeModules, 'aitomics');
+      // Check and update dependencies if needed
+      const flowDepsDir = await checkAndUpdateDependencies();
+      console.log('[FLOW_DEBUG] Using flow dependencies from:', flowDepsDir);
       
-      console.log('[FLOW_DEBUG] Package paths:', {
-        csvParse: csvParsePackagePath,
-        aitomics: aitomicsPackagePath
-      });
-
-      // Validate package paths
-      if (!fs.existsSync(csvParsePackagePath)) {
-        console.error('[FLOW_DEBUG] csv-parse package not found at:', csvParsePackagePath);
-        throw new Error(`csv-parse package not found at: ${csvParsePackagePath}`);
-      }
-      if (!fs.existsSync(aitomicsPackagePath)) {
-        console.error('[FLOW_DEBUG] aitomics package not found at:', aitomicsPackagePath);
-        throw new Error(`aitomics package not found at: ${aitomicsPackagePath}`);
-      }
-      
-      // Read package.json files to get versions
-      const csvParsePackage = JSON.parse(fs.readFileSync(path.join(csvParsePackagePath, 'package.json'), 'utf-8'));
-      const aitomicsPackage = JSON.parse(fs.readFileSync(path.join(aitomicsPackagePath, 'package.json'), 'utf-8'));
-
-      console.log('[FLOW] Found required packages:', {
-        csvParse: { path: csvParsePackagePath, version: csvParsePackage.version },
-        aitomics: { path: aitomicsPackagePath, version: aitomicsPackage.version }
-      });
-
-      // Create a package.json in the temp directory to set up module resolution
-      const tempPackageJson = path.join(tempDir, 'package.json');
-      fs.writeFileSync(tempPackageJson, JSON.stringify({
-        name: 'aitomics-flow-temp',
-        version: '1.0.0',
-        type: 'commonjs',
-        dependencies: {
-          'csv-parse': csvParsePackage.version,
-          'aitomics': 'file:' + aitomicsPackagePath
-        }
-      }, null, 2));
-
-      // Create node_modules in temp directory and symlink required packages
-      const tempNodeModules = path.join(tempDir, 'node_modules');
-      if (!fs.existsSync(tempNodeModules)) {
-        fs.mkdirSync(tempNodeModules, { recursive: true });
-      }
-
-      // Create symlinks for required packages
-      const packagesToLink = [
-        { name: 'csv-parse', path: csvParsePackagePath },
-        { name: 'aitomics', path: aitomicsPackagePath }
-      ];
-
-      for (const pkg of packagesToLink) {
-        const targetPath = path.join(tempNodeModules, pkg.name);
-        if (!fs.existsSync(targetPath)) {
-          try {
-            fs.symlinkSync(pkg.path, targetPath, 'dir');
-            console.log('[FLOW] Created symlink for', pkg.name, 'at', targetPath);
-          } catch (e) {
-            console.error('[FLOW] Failed to create symlink for', pkg.name, ':', e);
+      // Verify the dependencies directory structure
+      try {
+        const depsNodeModules = path.join(flowDepsDir, 'node_modules');
+        console.log('[FLOW_DEBUG] Checking dependencies directory structure:');
+        console.log('[FLOW_DEBUG] - Dependencies directory exists:', fs.existsSync(flowDepsDir));
+        console.log('[FLOW_DEBUG] - node_modules exists:', fs.existsSync(depsNodeModules));
+        if (fs.existsSync(depsNodeModules)) {
+          const csvParsePath = path.join(depsNodeModules, 'csv-parse');
+          console.log('[FLOW_DEBUG] - csv-parse exists:', fs.existsSync(csvParsePath));
+          if (fs.existsSync(csvParsePath)) {
+            console.log('[FLOW_DEBUG] - csv-parse contents:', fs.readdirSync(csvParsePath));
+            const packageJsonPath = path.join(csvParsePath, 'package.json');
+            if (fs.existsSync(packageJsonPath)) {
+              const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, 'utf-8'));
+              console.log('[FLOW_DEBUG] - csv-parse package.json:', packageJson);
+            }
           }
         }
+      } catch (e) {
+        console.error('[FLOW_DEBUG] Error checking dependencies:', e);
       }
 
+      // Create temporary directory for this execution
+      const tempDir = path.join(app.getPath('temp'), 'aitomics-flow');
+      console.log('[FLOW_DEBUG] Creating temp directory:', tempDir);
+      try {
+        // Clean up any existing temp directory
+        if (fs.existsSync(tempDir)) {
+          console.log('[FLOW_DEBUG] Cleaning up existing temp directory');
+          fs.rmSync(tempDir, { recursive: true, force: true });
+        }
+        fs.mkdirSync(tempDir, { recursive: true });
+        console.log('[FLOW_DEBUG] Temp directory created successfully');
+      } catch (e) {
+        console.error('[FLOW_DEBUG] Failed to create temp directory:', e);
+        throw new Error(`Failed to create temp directory: ${e.message}`);
+      }
+
+      // Create a symbolic link to the prepared node_modules
+      const tempNodeModules = path.join(tempDir, 'node_modules');
+      try {
+        console.log('[FLOW_DEBUG] Creating symbolic link from:', path.join(flowDepsDir, 'node_modules'), 'to:', tempNodeModules);
+        // Verify source exists before creating symlink
+        const sourcePath = path.join(flowDepsDir, 'node_modules');
+        if (!fs.existsSync(sourcePath)) {
+          throw new Error(`Source node_modules directory does not exist: ${sourcePath}`);
+        }
+        fs.symlinkSync(sourcePath, tempNodeModules, 'dir');
+        console.log('[FLOW_DEBUG] Created symbolic link to prepared node_modules');
+        
+        // Verify the symlink was created correctly
+        if (!fs.existsSync(tempNodeModules)) {
+          throw new Error('Symbolic link was not created successfully');
+        }
+        console.log('[FLOW_DEBUG] Verified symbolic link exists');
+        
+        // Check if csv-parse is accessible through the symlink
+        const csvParsePath = path.join(tempNodeModules, 'csv-parse');
+        console.log('[FLOW_DEBUG] Checking csv-parse through symlink:');
+        console.log('[FLOW_DEBUG] - csv-parse exists:', fs.existsSync(csvParsePath));
+        if (fs.existsSync(csvParsePath)) {
+          console.log('[FLOW_DEBUG] - csv-parse contents:', fs.readdirSync(csvParsePath));
+        }
+      } catch (e) {
+        console.error('[FLOW_DEBUG] Failed to create symbolic link:', e);
+        // Clean up temp directory before rethrowing
+        try {
+          fs.rmSync(tempDir, { recursive: true, force: true });
+        } catch (cleanupError) {
+          console.error('[FLOW_DEBUG] Failed to clean up temp directory after symlink error:', cleanupError);
+        }
+        throw new Error(`Failed to create symbolic link: ${e.message}`);
+      }
+
+      // Copy the package.json from the prepared dependencies
+      try {
+        fs.copyFileSync(
+          path.join(flowDepsDir, 'package.json'),
+          path.join(tempDir, 'package.json')
+        );
+        console.log('[FLOW_DEBUG] Copied package.json from prepared dependencies');
+      } catch (e) {
+        console.error('[FLOW_DEBUG] Failed to copy package.json:', e);
+        // Clean up temp directory before rethrowing
+        try {
+          fs.rmSync(tempDir, { recursive: true, force: true });
+        } catch (cleanupError) {
+          console.error('[FLOW_DEBUG] Failed to clean up temp directory after copy error:', cleanupError);
+        }
+        throw new Error(`Failed to copy package.json: ${e.message}`);
+      }
+
+      // Create the flow execution file
+      const tempFile = path.join(tempDir, `flow-${Date.now()}.js`);
+      console.log('[FLOW_DEBUG] Temp file path:', tempFile);
+
       // Wrap the code to handle console output and module resolution
+      console.log('[FLOW_DEBUG] Writing wrapped code to temp file');
       const wrappedCode = [
         // Set up module resolution
         "const Module = require('module');",
         "const originalResolveFilename = Module._resolveFilename;",
+        "const path = require('path');",
+        "const fs = require('fs');",
         "",
         // Override module resolution to include our paths
         "Module._resolveFilename = function(request, parent, isMain, options) {",
+        "  console.log('[FLOW_DEBUG] Resolving module:', request);",
+        "  console.log('[FLOW_DEBUG] Parent module:', parent ? parent.filename : 'none');",
         "  try {",
-        "    return originalResolveFilename(request, parent, isMain, options);",
+        "    // First try the original resolution",
+        "    const result = originalResolveFilename(request, parent, isMain, options);",
+        "    console.log('[FLOW_DEBUG] Original resolution succeeded:', result);",
+        "    return result;",
         "  } catch (err) {",
+        "    console.log('[FLOW_DEBUG] Original resolution failed:', err.message);",
         "    // Try to resolve in our node_modules",
-        `    const additionalPaths = ${JSON.stringify(possibleNodeModulesPaths)};`,
+        `    const additionalPaths = ${JSON.stringify([tempNodeModules])};`,
+        "    console.log('[FLOW_DEBUG] Trying additional paths:', additionalPaths);",
         "    for (const nodeModulesPath of additionalPaths) {",
         "      try {",
+        "        // Try direct resolution first",
+        "        console.log('[FLOW_DEBUG] Trying direct resolution in:', nodeModulesPath);",
         "        const fullPath = require.resolve(request, { paths: [nodeModulesPath] });",
-        "        if (fullPath) return fullPath;",
+        "        if (fullPath) {",
+        "          console.log('[FLOW_DEBUG] Direct resolution succeeded:', fullPath);",
+        "          return fullPath;",
+        "        }",
         "      } catch (e) {",
-        "        // Continue trying other paths",
+        "        console.log('[FLOW_DEBUG] Direct resolution failed:', e.message);",
+        "        // If direct resolution fails, try to find the package.json and resolve from there",
+        "        try {",
+        "          const packageName = request.split('/')[0];",
+        "          const packageJsonPath = path.join(nodeModulesPath, packageName, 'package.json');",
+        "          console.log('[FLOW_DEBUG] Looking for package.json at:', packageJsonPath);",
+        "          if (fs.existsSync(packageJsonPath)) {",
+        "            console.log('[FLOW_DEBUG] Found package.json');",
+        "            const packageJson = require(packageJsonPath);",
+        "            const mainFile = packageJson.main || 'index.js';",
+        "            const mainPath = path.join(nodeModulesPath, packageName, mainFile);",
+        "            console.log('[FLOW_DEBUG] Looking for main file at:', mainPath);",
+        "            if (fs.existsSync(mainPath)) {",
+        "              console.log('[FLOW_DEBUG] Found main file');",
+        "              return mainPath;",
+        "            }",
+        "            // If main file doesn't exist, try index.js",
+        "            const indexPath = path.join(nodeModulesPath, packageName, 'index.js');",
+        "            console.log('[FLOW_DEBUG] Looking for index.js at:', indexPath);",
+        "            if (fs.existsSync(indexPath)) {",
+        "              console.log('[FLOW_DEBUG] Found index.js');",
+        "              return indexPath;",
+        "            }",
+        "          }",
+        "        } catch (packageErr) {",
+        "          console.log('[FLOW_DEBUG] Package resolution failed:', packageErr.message);",
+        "        }",
         "      }",
         "    }",
+        "    // If all resolution attempts fail, throw the original error",
+        "    console.error('[FLOW_DEBUG] Module resolution failed for:', request);",
+        "    console.error('[FLOW_DEBUG] Tried paths:', additionalPaths);",
+        "    throw err;",
+        "  }",
+        "};",
+        "",
+        // Add debug logging for module resolution
+        "const originalRequire = Module.prototype.require;",
+        "Module.prototype.require = function(request) {",
+        "  try {",
+        "    console.log('[FLOW_DEBUG] Requiring module:', request);",
+        "    const result = originalRequire.apply(this, arguments);",
+        "    console.log('[FLOW_DEBUG] Successfully required:', request);",
+        "    return result;",
+        "  } catch (err) {",
+        "    console.error('[FLOW_DEBUG] Failed to require:', request);",
+        "    console.error('[FLOW_DEBUG] Error:', err.message);",
         "    throw err;",
         "  }",
         "};",
@@ -242,7 +375,8 @@ function registerIpcHandlers() {
         "});",
         "",
         "process.on('uncaughtException', (error) => {",
-        "  console.error(error.message);",
+        "  console.error('Uncaught exception:', error.message);",
+        "  console.error('Stack trace:', error.stack);",
         "  process.exit(1);",
         "});",
         "",
@@ -271,11 +405,8 @@ function registerIpcHandlers() {
         "",
         "    // Clean up temporary files only after flow execution is complete",
         "    try {",
-        `      fs.unlinkSync(${JSON.stringify(tempPackageJson)});`,
-        "      for (const pkg of " + JSON.stringify(packagesToLink) + ") {",
-        `        const targetPath = path.join(${JSON.stringify(tempNodeModules)}, pkg.name);`,
-        "        fs.rmSync(targetPath, { recursive: true, force: true });",
-        "      }",
+        `      fs.unlinkSync(${JSON.stringify(path.join(tempDir, 'package.json'))});`,
+        "      fs.rmSync(tempNodeModules, { recursive: true, force: true });",
         "    } catch (e) {",
         "      // Ignore cleanup errors",
         "    }",
@@ -286,6 +417,7 @@ function registerIpcHandlers() {
         "  } catch (error) {",
         "    // Log error and reject",
         "    console.error('Flow execution failed:', error.message);",
+        "    console.error('Stack trace:', error.stack);",
         "    reject(error);",
         "  }",
         "}).then((result) => {",
@@ -298,31 +430,85 @@ function registerIpcHandlers() {
       ].join('\n');
 
       fs.writeFileSync(tempFile, wrappedCode);
+      console.log('[FLOW_DEBUG] Wrote wrapped code to temp file');
+
+      // Get the correct Node.js executable path
+      let nodeExecutable;
+      if (app.isPackaged) {
+        // In packaged app, use the bundled Node.js
+        if (process.platform === 'win32') {
+          nodeExecutable = path.join(process.resourcesPath, 'app.asar.unpacked/node.exe');
+        } else {
+          nodeExecutable = path.join(process.resourcesPath, 'app.asar.unpacked/node');
+        }
+        
+        // Make sure the executable has the right permissions on Unix-like systems
+        if (process.platform !== 'win32') {
+          try {
+            fs.chmodSync(nodeExecutable, '755');
+          } catch (e) {
+            console.error('[FLOW_DEBUG] Error setting Node.js permissions:', e);
+          }
+        }
+        
+        console.log('[FLOW_DEBUG] Using bundled Node.js at:', nodeExecutable);
+        
+        if (!fs.existsSync(nodeExecutable)) {
+          throw new Error('Bundled Node.js not found. Please rebuild the application.');
+        }
+      } else {
+        // In development, use the system Node.js
+        nodeExecutable = process.execPath;
+      }
+
+      console.log('[FLOW_DEBUG] Using Node.js executable:', nodeExecutable);
+      console.log('[FLOW_DEBUG] Node.js executable exists:', fs.existsSync(nodeExecutable));
 
       // Store the child process reference
-      currentFlowProcess = spawn(process.execPath, [tempFile], {
+      console.log('[FLOW_DEBUG] Spawning child process with:', {
+        nodeExecutable,
+        tempFile,
+        env: {
+          ...process.env,
+          NODE_PATH: tempNodeModules,
+          FORCE_COLOR: '1',
+          DEBUG_COLORS: '1',
+          ELECTRON_RUN_AS_NODE: '1'  // Important: Run as Node.js process
+        }
+      });
+
+      currentFlowProcess = spawn(nodeExecutable, [tempFile], {
         stdio: ['pipe', 'pipe', 'pipe'],
         env: {
           ...process.env,
-          NODE_PATH: possibleNodeModulesPaths.join(path.delimiter),
+          NODE_PATH: tempNodeModules,
           FORCE_COLOR: '1',
-          DEBUG_COLORS: '1'
+          DEBUG_COLORS: '1',
+          ELECTRON_RUN_AS_NODE: '1'  // Important: Run as Node.js process
         },
         shell: false,
         detached: false  // Ensure process is not detached
       });
 
-      // Ensure all streams are properly handled
-      currentFlowProcess.stdin.on('error', (err) => {
-        console.error('[FLOW_DEBUG] stdin error:', err);
+      // Log process events immediately
+      currentFlowProcess.on('error', (error) => {
+        console.error('[FLOW_DEBUG] Child process error:', error);
+        mainWindow.webContents.send('flow-log', `[FLOW_ERROR] Child process error: ${error.message}`);
       });
 
-      currentFlowProcess.stdout.on('error', (err) => {
-        console.error('[FLOW_DEBUG] stdout error:', err);
+      currentFlowProcess.on('exit', (code, signal) => {
+        console.log('[FLOW_DEBUG] Child process exited:', { code, signal });
+        if (code !== 0) {
+          mainWindow.webContents.send('flow-log', `[FLOW_ERROR] Process exited with code ${code}${signal ? ` and signal ${signal}` : ''}`);
+        }
       });
 
-      currentFlowProcess.stderr.on('error', (err) => {
-        console.error('[FLOW_DEBUG] stderr error:', err);
+      // Add stderr handling
+      currentFlowProcess.stderr.on('data', (data) => {
+        const errorMessage = data.toString();
+        console.error('[FLOW_DEBUG] Child process stderr:', errorMessage);
+        // Send the error to the renderer process
+        mainWindow.webContents.send('flow-log', `[FLOW_ERROR] ${errorMessage}`);
       });
 
       return new Promise((resolve, reject) => {
@@ -409,38 +595,67 @@ function registerIpcHandlers() {
             buffer = buffer.slice(newlineIndex + 1);
             
             if (line.trim()) {
-              sendLog(line);
+              try {
+                // Try to parse as JSON first
+                const logData = JSON.parse(line);
+                const message = logData.type === 'error' ? `[FLOW_ERROR] ${logData.message}` :
+                              logData.type === 'warn' ? `[FLOW_WARN] ${logData.message}` :
+                              logData.message;
+                
+                const cleanMessage = message.trim();
+                const uniqueKey = `${logData.type}:${cleanMessage}`;
+                
+                if (cleanMessage && !sentMessages.has(uniqueKey)) {
+                  sentMessages.add(uniqueKey);
+                  mainWindow.webContents.send('flow-log', cleanMessage);
+                }
+              } catch (e) {
+                // If not JSON, treat as plain message
+                const cleanMessage = line.trim();
+                if (cleanMessage) {
+                  const uniqueKey = `plain:${cleanMessage}`;
+                  if (!sentMessages.has(uniqueKey)) {
+                    sentMessages.add(uniqueKey);
+                    mainWindow.webContents.send('flow-log', cleanMessage);
+                  }
+                }
+              }
             }
           }
         });
 
-        // Handle any remaining data in buffer when process ends
+        // Handle process close with more detailed error reporting
         currentFlowProcess.on('close', (code) => {
           sendDebugLog(`Child process closed with code: ${code}`);
+          
+          // Process any remaining buffer
           if (buffer.trim()) {
-            sendLog(buffer);
+            try {
+              const logData = JSON.parse(buffer);
+              const message = logData.type === 'error' ? `[FLOW_ERROR] ${logData.message}` :
+                            logData.type === 'warn' ? `[FLOW_WARN] ${logData.message}` :
+                            logData.message;
+              mainWindow.webContents.send('flow-log', message.trim());
+            } catch (e) {
+              mainWindow.webContents.send('flow-log', buffer.trim());
+            }
           }
+
           // Clean up the temporary file
           try {
             fs.unlinkSync(tempFile);
           } catch (e) {
-            // Ignore cleanup errors
+            console.error('[FLOW_DEBUG] Error cleaning up temp file:', e);
           }
+
           if (code === 0) {
             resolve();
           } else {
-            reject(new Error(`Flow execution failed with code ${code}`));
+            const errorMessage = `Flow execution failed with code ${code}`;
+            console.error('[FLOW_DEBUG]', errorMessage);
+            mainWindow.webContents.send('flow-log', `[FLOW_ERROR] ${errorMessage}`);
+            reject(new Error(errorMessage));
           }
-        });
-
-        // Handle process events
-        currentFlowProcess.on('error', (error) => {
-          sendDebugLog(`Child process error: ${error.message}`);
-          reject(error);
-        });
-
-        currentFlowProcess.on('exit', (code, signal) => {
-          sendDebugLog(`Child process exited: ${JSON.stringify({ code, signal })}`);
         });
 
         // Set a timeout
@@ -796,35 +1011,49 @@ function registerIpcHandlers() {
 function createWindow() {
   // Get absolute paths for both possible icon locations
   const rendererIconPath = path.join(__dirname, 'src/renderer/public/logo512.png');
-  const buildIconPath = path.join(__dirname, 'build/icon.icns');
+  const buildIconPath = path.join(__dirname, 'build/icon.png');
+  const resourcesIconPath = app.isPackaged ? path.join(process.resourcesPath, 'icon.png') : null;
   
-  // Use PNG file directly for development
-  const iconPath = process.env.NODE_ENV === 'development' ? 
-    rendererIconPath : 
-    (process.platform === 'darwin' ? buildIconPath : rendererIconPath);
+  // Determine which icon to use
+  let iconPath;
+  if (app.isPackaged) {
+    // In packaged app, try resources path first, then fall back to build path
+    iconPath = resourcesIconPath && fs.existsSync(resourcesIconPath) ? resourcesIconPath : buildIconPath;
+  } else {
+    // In development, use PNG for all platforms
+    iconPath = buildIconPath;
+  }
   
   console.log('Environment:', process.env.NODE_ENV);
   console.log('Platform:', process.platform);
-  console.log('Selected icon path:', iconPath);
+  console.log('Is Packaged:', app.isPackaged);
+  console.log('Icon paths:', {
+    renderer: rendererIconPath,
+    build: buildIconPath,
+    resources: resourcesIconPath,
+    selected: iconPath,
+    exists: iconPath ? fs.existsSync(iconPath) : false
+  });
   
+  // Set app name for macOS before window creation
+  if (process.platform === 'darwin') {
+    app.setName('Aitomics UI');
+    app.setAppUserModelId('com.aitomics.ui');
+  }
+
   // Create window with minimal configuration first
   mainWindow = new BrowserWindow({
     width: 1200,
     height: 800,
-    title: 'Aitomics',
+    title: 'Aitomics UI',
     show: false, // Don't show until ready
-    // Don't set icon in window creation
+    icon: iconPath, // Set icon in window creation
     webPreferences: {
       nodeIntegration: true,
       contextIsolation: true,
       preload: path.join(__dirname, 'src/renderer/src/preload.js')
     }
   });
-
-  // Set app name for macOS
-  if (process.platform === 'darwin') {
-    app.setName('Aitomics');
-  }
 
   // Set icon after window creation
   if (iconPath) {
@@ -857,7 +1086,7 @@ function createWindow() {
         code: error.code,
         path: iconPath,
         exists: fs.existsSync(iconPath),
-        stats: fs.statSync(iconPath)
+        stats: fs.existsSync(iconPath) ? fs.statSync(iconPath) : null
       });
     }
   }
@@ -878,10 +1107,77 @@ function createWindow() {
 
   // Load the app
   if (process.env.NODE_ENV === 'development') {
+    console.log('Loading development app from http://localhost:3000');
     mainWindow.loadURL('http://localhost:3000');
     mainWindow.webContents.openDevTools();
   } else {
-    mainWindow.loadFile(path.join(__dirname, 'src/renderer/build/index.html'));
+    // In production, load from the correct path relative to the app
+    let indexPath;
+    if (app.isPackaged) {
+      // In packaged app, try these paths in order:
+      const possiblePaths = [
+        path.join(process.resourcesPath, 'app.asar.unpacked/src/renderer/build/index.html'),
+        path.join(process.resourcesPath, 'app.asar/src/renderer/build/index.html'),
+        path.join(__dirname, 'src/renderer/build/index.html'),
+        path.join(__dirname, 'build/index.html')
+      ];
+      
+      console.log('Checking possible paths for packaged app:', possiblePaths);
+      
+      // Find the first path that exists
+      indexPath = possiblePaths.find(p => fs.existsSync(p));
+      
+      if (!indexPath) {
+        console.error('Could not find index.html in any of the expected locations:', possiblePaths);
+        throw new Error('Could not find index.html in packaged app');
+      }
+    } else {
+      // In non-packaged production build
+      indexPath = path.join(__dirname, 'src/renderer/build/index.html');
+    }
+
+    console.log('Production environment details:', {
+      __dirname,
+      indexPath,
+      exists: fs.existsSync(indexPath),
+      appPath: app.getAppPath(),
+      isPackaged: app.isPackaged,
+      resourcesPath: process.resourcesPath
+    });
+
+    // Log the contents of the build directory
+    try {
+      const buildDir = path.dirname(indexPath);
+      console.log('Contents of build directory:', fs.readdirSync(buildDir));
+    } catch (err) {
+      console.error('Error reading build directory:', err);
+    }
+
+    console.log('Attempting to load production app from:', indexPath);
+    mainWindow.loadFile(indexPath).catch(err => {
+      console.error('Error loading production app:', err);
+      console.error('Error details:', {
+        message: err.message,
+        code: err.code,
+        path: indexPath,
+        exists: fs.existsSync(indexPath)
+      });
+      throw err;
+    });
+
+    // Add error handler for renderer process
+    mainWindow.webContents.on('did-fail-load', (event, errorCode, errorDescription) => {
+      console.error('Failed to load app:', {
+        errorCode,
+        errorDescription,
+        url: mainWindow.webContents.getURL()
+      });
+    });
+
+    // Add console message handler
+    mainWindow.webContents.on('console-message', (event, level, message, line, sourceId) => {
+      console.log('Renderer console:', { level, message, line, sourceId });
+    });
   }
 
   // Check for updates after window is ready
@@ -894,8 +1190,13 @@ function createWindow() {
 
 // Register IPC handlers when app is ready
 app.whenReady().then(() => {
+  console.log('App is ready, initializing...');
   registerIpcHandlers();
+  isAppReady = true;
   createWindow();
+}).catch(err => {
+  console.error('Error during app initialization:', err);
+  app.quit();
 });
 
 app.on('window-all-closed', () => {
@@ -905,7 +1206,24 @@ app.on('window-all-closed', () => {
 });
 
 app.on('activate', () => {
-  if (BrowserWindow.getAllWindows().length === 0) {
+  // Only create window if app is ready and no windows exist
+  if (isAppReady && BrowserWindow.getAllWindows().length === 0) {
     createWindow();
   }
-}); 
+});
+
+// Add a function to check if dependencies need to be updated
+async function checkAndUpdateDependencies() {
+  // In development, use the build directory
+  const flowDepsDir = app.isPackaged 
+    ? path.join(process.resourcesPath, 'app.asar.unpacked/build/flow-dependencies')
+    : path.join(process.cwd(), 'build/flow-dependencies');
+  
+  console.log('[FLOW_DEBUG] Using flow dependencies from:', flowDepsDir);
+  
+  if (!fs.existsSync(flowDepsDir)) {
+    throw new Error('Flow dependencies not found. Please rebuild the application.');
+  }
+
+  return flowDepsDir;
+} 

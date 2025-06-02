@@ -1883,12 +1883,16 @@ const BlockEditor: React.FC<BlockEditorProps> = ({
   }, [project, globalActions, executionMode, customCount, llmModel, llmTemperature, llmMaxTokens]);
 
   const handleRunFlow = useCallback(() => {
+    console.log('[FLOW_DEBUG] Starting flow execution...');
+    console.log('[FLOW_DEBUG] LM Studio status:', { isRunning: isLmStudioRunning });
+    
     if (!isLmStudioRunning) {
-      // Show error message
+      console.error('[FLOW_DEBUG] LM Studio is not running');
       window.alert('LM Studio is not running. Please start LM Studio and try again.');
       return;
     }
 
+    console.log('[FLOW_DEBUG] Generating flow code...');
     const code = generateFlowCode(
       project, 
       globalActions, 
@@ -1899,9 +1903,12 @@ const BlockEditor: React.FC<BlockEditorProps> = ({
         maxTokens: llmMaxTokens
       }
     );
+    console.log('[FLOW_DEBUG] Flow code generated, length:', code.length);
+    
     setIsRunDrawerOpen(false);
     setShowExecutionWindow(true);
     setGeneratedCode(code);
+    console.log('[FLOW_DEBUG] Flow execution window opened');
   }, [project, globalActions, executionMode, customCount, llmModel, llmTemperature, llmMaxTokens, isLmStudioRunning]);
 
   // Add debounced update functions

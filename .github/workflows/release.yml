@@ -191,27 +191,6 @@ jobs:
         env:
           NODE_OPTIONS: "--max-old-space-size=4096"
 
-      - name: Save npm cache
-        uses: actions/cache@v3
-        if: steps.npm-cache.outputs.cache-hit != 'true'
-        with:
-          path: ~/.npm
-          key: ${{ runner.os }}-npm-cache-${{ hashFiles('**/package-lock.json') }}
-
-      - name: Save root node_modules cache
-        uses: actions/cache@v3
-        if: steps.root-cache.outputs.cache-hit != 'true'
-        with:
-          path: node_modules
-          key: ${{ runner.os }}-root-modules-${{ hashFiles('package-lock.json') }}
-
-      - name: Save renderer node_modules cache
-        uses: actions/cache@v3
-        if: steps.renderer-cache.outputs.cache-hit != 'true'
-        with:
-          path: src/renderer/node_modules
-          key: ${{ runner.os }}-renderer-modules-${{ hashFiles('src/renderer/package-lock.json') }}
-
       - name: Build renderer
         run: |
           cd src/renderer
@@ -243,7 +222,6 @@ jobs:
           ELECTRON_VERSION: "28.1.0"
 
   windows-release:
-    needs: macos-release  # This ensures Windows job runs after macOS job completes
     runs-on: windows-latest
     timeout-minutes: 30
     env:
@@ -326,18 +304,19 @@ jobs:
         timeout-minutes: 2
 
       - name: Debug cache paths
+        shell: pwsh  # Explicitly use PowerShell
         run: |
           echo "Current directory: $(pwd)"
           echo "Listing package files:"
-          if [ "$RUNNER_OS" == "Windows" ]; then
-            dir package*.json
+          if ($env:RUNNER_OS -eq "Windows") {
+            Get-ChildItem package*.json
             echo "Listing renderer package files:"
-            dir src\renderer\package*.json
-          else
+            Get-ChildItem src\renderer\package*.json
+          } else {
             ls -la package*.json
             echo "Listing renderer package files:"
             ls -la src/renderer/package*.json
-          fi
+          }
           echo "Cache keys:"
           echo "Root cache key: ${{ runner.os }}-root-modules-${{ hashFiles('package-lock.json') }}"
           echo "Renderer cache key: ${{ runner.os }}-renderer-modules-${{ hashFiles('src/renderer/package-lock.json') }}"
@@ -381,34 +360,35 @@ jobs:
 
       - name: Install renderer dependencies
         if: steps.renderer-cache.outputs.cache-hit != 'true'
+        shell: pwsh  # Explicitly use PowerShell
         run: |
           echo "Starting renderer dependencies installation..."
           echo "Current directory: $(pwd)"
           echo "Listing src/renderer contents:"
-          if [ "$RUNNER_OS" == "Windows" ]; then
-            dir src\renderer
-            cd src\renderer
+          if ($env:RUNNER_OS -eq "Windows") {
+            Get-ChildItem src\renderer
+            Set-Location src\renderer
             echo "Changed to renderer directory: $(pwd)"
             echo "Listing package files:"
-            dir package*.json
-          else
+            Get-ChildItem package*.json
+          } else {
             ls -la src/renderer
             cd src/renderer
             echo "Changed to renderer directory: $(pwd)"
             echo "Listing package files:"
             ls -la package*.json
-          fi
+          }
           
           echo "Installing dependencies (this may take a few minutes)..."
           npm install --no-audit --no-fund --no-progress
           
           echo "Installation complete. Verifying node_modules..."
-          if [ "$RUNNER_OS" == "Windows" ]; then
-            dir node_modules | Select-Object -First 5
-          else
+          if ($env:RUNNER_OS -eq "Windows") {
+            Get-ChildItem node_modules | Select-Object -First 5
+          } else {
             ls -la node_modules | head -n 5
-          fi
-          cd ../..
+          }
+          Set-Location ../..
         env:
           NODE_OPTIONS: "--max-old-space-size=4096"
 
@@ -420,27 +400,6 @@ jobs:
           npm list electron
         env:
           NODE_OPTIONS: "--max-old-space-size=4096"
-
-      - name: Save npm cache
-        uses: actions/cache@v3
-        if: steps.npm-cache.outputs.cache-hit != 'true'
-        with:
-          path: ~/.npm
-          key: ${{ runner.os }}-npm-cache-${{ hashFiles('**/package-lock.json') }}
-
-      - name: Save root node_modules cache
-        uses: actions/cache@v3
-        if: steps.root-cache.outputs.cache-hit != 'true'
-        with:
-          path: node_modules
-          key: ${{ runner.os }}-root-modules-${{ hashFiles('package-lock.json') }}
-
-      - name: Save renderer node_modules cache
-        uses: actions/cache@v3
-        if: steps.renderer-cache.outputs.cache-hit != 'true'
-        with:
-          path: src/renderer/node_modules
-          key: ${{ runner.os }}-renderer-modules-${{ hashFiles('src/renderer/package-lock.json') }}
 
       - name: Build renderer
         run: |

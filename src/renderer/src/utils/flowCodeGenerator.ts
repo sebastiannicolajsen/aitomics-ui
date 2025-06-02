@@ -103,7 +103,16 @@ export function generateFlowCode(project: Project, globalActions: Action[], maxI
 
 // Import required dependencies
 const fs = require('fs');
-const { parse } = require('csv-parse/sync');
+const path = require('path');
+
+// Ensure csv-parse is available
+let csvParse;
+try {
+  csvParse = require('csv-parse/sync');
+} catch (error) {
+  console.error('[FLOW_ERROR] Failed to import csv-parse:', error.message);
+  throw new Error('Failed to import csv-parse package. Please ensure it is installed.');
+}
 
 // UI Logging toggle
 const UI_LOGGING = true;
@@ -163,7 +172,7 @@ async function parseFileContent(filePath, nodeName) {
         
       case 'csv':
         const csvContent = fs.readFileSync(filePath, 'utf-8');
-        items = parse(csvContent, {
+        items = csvParse.parse(csvContent, {
           columns: true,
           skip_empty_lines: true
         });

@@ -1,3 +1,6 @@
+# Ignore placeholder files
+__placeholder__.js
+
 # Ignore build output
 build/
 dist/

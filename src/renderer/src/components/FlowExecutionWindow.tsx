@@ -688,7 +688,7 @@ const FlowExecutionWindow: React.FC<FlowExecutionWindowProps> = ({ project, onCl
     flowProgress: [],
     logs: [],
   });
-  const [showDebugLogs, setShowDebugLogs] = useState(false);
+  const [showDebugLogs, setShowDebugLogs] = useState(false);  // Changed to false by default
   const consoleRef = useRef<HTMLDivElement>(null);
   const seenMessagesRef = useRef<Set<string>>(new Set());
   const processedImportsRef = useRef<Set<string>>(new Set());
@@ -832,18 +832,27 @@ const FlowExecutionWindow: React.FC<FlowExecutionWindowProps> = ({ project, onCl
 
   // Execute flow only when both executionGraph and generatedCode are available, and hasn't been executed yet
   useEffect(() => {
+    console.log('[FLOW_DEBUG] Checking execution conditions:', {
+      hasExecutionGraph: !!executionGraph,
+      hasGeneratedCode: !!generatedCode,
+      hasExecuted: hasExecuted.current
+    });
+
     if (executionGraph && generatedCode && !hasExecuted.current) {
+      console.log('[FLOW_DEBUG] Starting flow execution...');
       hasExecuted.current = true;
       executeFlow();
     }
   }, [executionGraph, generatedCode]);
 
+  // Add a ref to track our listener
+  const logListenerRef = useRef<((log: string) => void) | null>(null);
+
   // Update the log listener to handle errors in flow progress
   useEffect(() => {
-    if (!window.electron?.ipcRenderer) {
-      return;
-    }
+    if (!window.electron) return;
 
+    // Create a single handler function
     const handleLog = (log: string) => {
       try {
         // Filter out debug logs unless enabled
@@ -1239,19 +1248,31 @@ const FlowExecutionWindow: React.FC<FlowExecutionWindowProps> = ({ project, onCl
       }
     };
 
-    window.electron.ipcRenderer.on('flow-log', handleLog);
+    // Store the handler in our ref
+    logListenerRef.current = handleLog;
 
+    // Remove our previous listener if it exists
+    if (logListenerRef.current) {
+      window.electron.ipcRenderer.removeListener('flow-log', logListenerRef.current);
+      console.log('[FLOW_DEBUG] Removed previous flow-log listener');
+    }
+
+    // Add our new listener
+    window.electron.ipcRenderer.on('flow-log', handleLog);
+    console.log('[FLOW_DEBUG] Added new flow-log listener');
+
+    // Cleanup function to remove the listener and clear refs
     return () => {
-      try {
-        window.electron?.ipcRenderer.removeListener('flow-log', handleLog);
+      if (window.electron && logListenerRef.current) {
+        window.electron.ipcRenderer.removeListener('flow-log', logListenerRef.current);
+        logListenerRef.current = null;
         seenMessagesRef.current.clear();
         processedImportsRef.current.clear();
         completedImportsRef.current.clear();
-      } catch (error) {
-        // Silently handle cleanup errors
+        console.log('[FLOW_DEBUG] Cleaned up flow-log listener and refs');
       }
     };
-  }, [showDebugLogs, project]);
+  }, []); // Empty dependency array to ensure this only runs once
 
   // Add auto-scroll effect
   useEffect(() => {
@@ -1394,8 +1415,16 @@ const FlowExecutionWindow: React.FC<FlowExecutionWindowProps> = ({ project, onCl
   };
 
   const executeFlow = useCallback(async () => {
-    if (!generatedCode || !window.electron) return;
+    console.log('[FLOW_DEBUG] executeFlow called');
+    if (!generatedCode || !window.electron) {
+      console.error('[FLOW_DEBUG] Missing requirements:', {
+        hasGeneratedCode: !!generatedCode,
+        hasElectron: !!window.electron
+      });
+      return;
+    }
 
+    console.log('[FLOW_DEBUG] Setting execution state to running');
     setExecutionState(prev => ({ 
       ...prev, 
       status: 'running',
@@ -1403,7 +1432,9 @@ const FlowExecutionWindow: React.FC<FlowExecutionWindowProps> = ({ project, onCl
     }));
 
     try {
+      console.log('[FLOW_DEBUG] Invoking execute-flow IPC handler');
       await window.electron.ipcRenderer.invoke('execute-flow', generatedCode);
+      console.log('[FLOW_DEBUG] Flow execution completed successfully');
       setExecutionState(prev => ({ 
         ...prev, 
         status: 'completed', 
@@ -1411,6 +1442,7 @@ const FlowExecutionWindow: React.FC<FlowExecutionWindowProps> = ({ project, onCl
         currentStep: 'Flow execution completed'
       }));
     } catch (error) {
+      console.error('[FLOW_DEBUG] Flow execution failed:', error);
       setExecutionState(prev => ({
         ...prev,
         status: 'error',

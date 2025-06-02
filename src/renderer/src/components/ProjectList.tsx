@@ -41,6 +41,7 @@ import TransformIcon from '@mui/icons-material/Transform';
 import CompareIcon from '@mui/icons-material/Compare';
 import * as Icons from '@mui/icons-material';
 import { builtInActions } from '../actions/builtInActions';
+import logo from '../assets/logo.svg';
 
 interface ProjectListProps {
   projects: Project[];
@@ -326,6 +327,21 @@ const ProjectList: React.FC<ProjectListProps> = ({
         height: '100%',
         overflow: 'hidden'
       }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2, px: 1 }}>
+          <img 
+            src={process.env.NODE_ENV === 'development' ? logo : './static/media/logo.546042dce2b67c756c718d2342a02404.svg'} 
+            alt="Aitomics Logo" 
+            style={{ width: '24px', height: '24px' }} 
+          />
+          <Typography variant="h6" sx={{ 
+            fontSize: '1.1rem',
+            fontWeight: 600,
+            color: 'text.primary',
+            flex: 1
+          }}>
+            Aitomics UI
+          </Typography>
+        </Box>
         <Box sx={{ mb: 2, flexShrink: 0 }}>
           <Typography variant="h6" gutterBottom>
             {activeTab === 0 ? 'Projects' : 'Actions'}

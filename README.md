@@ -23,18 +23,42 @@ A local desktop application for managing Aitomics projects with a block-based co
    npm run dev
    ```
 
-## Building for Production
+## Building and Running
 
-1. Build the React application:
-   ```bash
-   cd src/renderer
-   npm run build
-   ```
+### Development Mode
+Run the application in development mode with hot reloading:
+```bash
+npm run dev
+```
 
-2. Build the Electron application:
-   ```bash
-   npm run build
-   ```
+### Production Build (Local)
+Build and run the application in production mode locally:
+```bash
+# Build the application (includes preparing flow dependencies)
+NODE_ENV=production npm run build
+
+# Run the production build
+NODE_ENV=production npm start
+```
+
+### Production Package
+Create a distributable package of the application:
+```bash
+# This will build the application and create installers/packages
+npm run package-app
+```
+
+### Flow Dependencies
+The application uses a script to prepare flow dependencies during the build process. This ensures that all required packages are available for flow execution. The dependencies are:
+- Prepared during the build process
+- Stored in `build/flow-dependencies`
+- Included in the final application package
+- Automatically used by the application when executing flows
+
+You can manually prepare the dependencies (if needed) using:
+```bash
+npm run prepare-flow-deps
+```
 
 ## Project Structure
 
@@ -43,3 +67,26 @@ A local desktop application for managing Aitomics projects with a block-based co
   - `src/components/` - React components
   - `src/types/` - TypeScript type definitions
   - `src/preload.ts` - Electron preload script
+- `scripts/` - Build and utility scripts
+  - `prepare-flow-deps.js` - Script for preparing flow dependencies
+  - `release.js` - Script for handling releases
+
+## Application Logs
+
+The application logs are stored in the following locations:
+
+### macOS
+- Log file: `~/Library/Application Support/aitomics-ui/app.log`
+- Console.app: Search for "Aitomics UI" to view all logs including system-level information
+
+### Windows
+- Log file: `%APPDATA%\Aitomics UI\app.log`
+- Event Viewer: Application logs can be found under "Windows Logs" > "Application"
+
+The log file contains detailed information about:
+- Application startup and initialization
+- Flow execution and processing
+- Error messages and stack traces
+- UI state changes and user interactions
+
+Logs are appended to the file each time the application runs, with timestamps and log levels (INFO, ERROR, WARN, DEBUG).

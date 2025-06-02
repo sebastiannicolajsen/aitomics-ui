@@ -51,3 +51,4 @@ contextBridge.exposeInMainWorld('electron', {
         ipcRenderer.on('update-status', function (_event, status, info) { return callback(status, info); });
     }
 });
+//# sourceMappingURL=preload.js.map

@@ -10,6 +10,8 @@ import { builtInActions } from './actions/builtInActions';
 import ActionEditor from './components/ActionEditor';
 import { Action } from './types/Project';
 import VersionInfo from './components/VersionInfo';
+import logo from './assets/logo.svg';
+import { Typography } from '@mui/material';
 
 declare global {
   interface Window {
@@ -366,8 +368,37 @@ const App: React.FC = () => {
               draggedAction={draggedAction}
             />
           ) : (
-            <Box sx={{ p: 3, textAlign: 'center', color: openAITheme.palette.text.secondary }}>
-              Select or create a project to begin
+            <Box sx={{ 
+              p: 3, 
+              textAlign: 'center', 
+              color: openAITheme.palette.text.secondary,
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              justifyContent: 'center',
+              height: '100%',
+              gap: 2
+            }}>
+              <img 
+                src={process.env.NODE_ENV === 'development' ? logo : './static/media/logo.546042dce2b67c756c718d2342a02404.svg'} 
+                alt="Aitomics Logo" 
+                style={{ 
+                  width: '120px', 
+                  height: '120px',
+                  opacity: 0.8,
+                  filter: 'grayscale(20%)'
+                }} 
+              />
+              <Typography variant="h6" sx={{ 
+                color: openAITheme.palette.text.primary,
+                fontWeight: 500,
+                mb: 1
+              }}>
+                Welcome to Aitomics UI
+              </Typography>
+              <Typography variant="body1">
+                Select or create a project to begin
+              </Typography>
             </Box>
           )}
         </Box>
