@@ -296,17 +296,25 @@ const App: React.FC = () => {
   return (
     <ThemeProvider theme={openAITheme}>
       <CssBaseline />
-      <Box sx={{ display: 'flex', height: '100vh', background: openAITheme.palette.background.default }}>
+      <Box sx={{ display: 'flex', height: '100vh', background: openAITheme.palette.background.default, overflow: 'hidden' }}>
         <Box sx={{ 
           width: 320, 
           borderRight: 0, 
           bgcolor: openAITheme.palette.background.paper, 
-          p: 2, 
           boxShadow: 3,
           display: 'flex',
-          flexDirection: 'column'
+          flexDirection: 'column',
+          height: '100%',
+          overflow: 'hidden'
         }}>
-          <Box sx={{ flex: 1 }}>
+          <Box sx={{ 
+            flex: 1, 
+            minHeight: 0,
+            p: 2,
+            display: 'flex',
+            flexDirection: 'column',
+            overflow: 'hidden'
+          }}>
             <ProjectList
               projects={projects}
               selectedProject={selectedProject}
@@ -327,12 +335,13 @@ const App: React.FC = () => {
             />
           </Box>
           <Box sx={{ 
-            pt: 2, 
-            mt: 2, 
+            p: 2,
             borderTop: 1, 
             borderColor: 'divider',
             display: 'flex',
-            justifyContent: 'center'
+            justifyContent: 'center',
+            flexShrink: 0,
+            bgcolor: openAITheme.palette.background.paper
           }}>
             <VersionInfo />
           </Box>

@@ -314,10 +314,19 @@ const ProjectList: React.FC<ProjectListProps> = ({
   };
 
   return (
-    <Box sx={{ height: '100%', display: 'flex' }}>
+    <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
       {/* Left sidebar with projects/actions list */}
-      <Box sx={{ width: 300, borderRight: 1, borderColor: 'divider', p: 2, display: 'flex', flexDirection: 'column' }}>
-        <Box sx={{ mb: 2 }}>
+      <Box sx={{ 
+        width: 300, 
+        borderRight: 1, 
+        borderColor: 'divider', 
+        p: 2, 
+        display: 'flex', 
+        flexDirection: 'column', 
+        height: '100%',
+        overflow: 'hidden'
+      }}>
+        <Box sx={{ mb: 2, flexShrink: 0 }}>
           <Typography variant="h6" gutterBottom>
             {activeTab === 0 ? 'Projects' : 'Actions'}
           </Typography>
@@ -343,14 +352,14 @@ const ProjectList: React.FC<ProjectListProps> = ({
                 }
               }}
               sx={{
-                background: 'linear-gradient(145deg, #e6f7f1 0%, #d1f0e6 100%)',
-                boxShadow: '0 4px 12px rgba(16, 163, 127, 0.1)',
+                background: 'linear-gradient(145deg, #f7f7f8 0%, #f0f0f1 100%)',
+                boxShadow: '0 4px 12px rgba(0, 0, 0, 0.05)',
                 borderRadius: 12,
-                border: '1px solid rgba(16, 163, 127, 0.2)',
-                color: '#10a37f',
+                border: '1px solid rgba(0, 0, 0, 0.1)',
+                color: '#666666',
                 '&:hover': {
-                  background: 'linear-gradient(145deg, #d1f0e6 0%, #b8e9db 100%)',
-                  boxShadow: '0 6px 16px rgba(16, 163, 127, 0.15)',
+                  background: 'linear-gradient(145deg, #f0f0f1 0%, #e8e8e9 100%)',
+                  boxShadow: '0 6px 16px rgba(0, 0, 0, 0.08)',
                 },
               }}
             >
@@ -367,14 +376,14 @@ const ProjectList: React.FC<ProjectListProps> = ({
               <IconButton
                 component="span"
                 sx={{
-                  background: 'linear-gradient(145deg, #e6f7f1 0%, #d1f0e6 100%)',
-                  boxShadow: '0 4px 12px rgba(16, 163, 127, 0.1)',
+                  background: 'linear-gradient(145deg, #f7f7f8 0%, #f0f0f1 100%)',
+                  boxShadow: '0 4px 12px rgba(0, 0, 0, 0.05)',
                   borderRadius: 12,
-                  border: '1px solid rgba(16, 163, 127, 0.2)',
-                  color: '#10a37f',
+                  border: '1px solid rgba(0, 0, 0, 0.1)',
+                  color: '#666666',
                   '&:hover': {
-                    background: 'linear-gradient(145deg, #d1f0e6 0%, #b8e9db 100%)',
-                    boxShadow: '0 6px 16px rgba(16, 163, 127, 0.15)',
+                    background: 'linear-gradient(145deg, #f0f0f1 0%, #e8e8e9 100%)',
+                    boxShadow: '0 6px 16px rgba(0, 0, 0, 0.08)',
                   },
                 }}
               >
@@ -390,14 +399,14 @@ const ProjectList: React.FC<ProjectListProps> = ({
                 }
               }}
               sx={{
-                background: 'linear-gradient(145deg, #e6f7f1 0%, #d1f0e6 100%)',
-                boxShadow: '0 4px 12px rgba(16, 163, 127, 0.1)',
+                background: 'linear-gradient(145deg, #f7f7f8 0%, #f0f0f1 100%)',
+                boxShadow: '0 4px 12px rgba(0, 0, 0, 0.05)',
                 borderRadius: 12,
-                border: '1px solid rgba(16, 163, 127, 0.2)',
-                color: '#10a37f',
+                border: '1px solid rgba(0, 0, 0, 0.1)',
+                color: '#666666',
                 '&:hover': {
-                  background: 'linear-gradient(145deg, #d1f0e6 0%, #b8e9db 100%)',
-                  boxShadow: '0 6px 16px rgba(16, 163, 127, 0.15)',
+                  background: 'linear-gradient(145deg, #f0f0f1 0%, #e8e8e9 100%)',
+                  boxShadow: '0 6px 16px rgba(0, 0, 0, 0.08)',
                 },
               }}
             >
@@ -406,7 +415,7 @@ const ProjectList: React.FC<ProjectListProps> = ({
           </Box>
         </Box>
 
-        <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 2 }}>
+        <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 2, flexShrink: 0 }}>
           <Tabs
             value={activeTab}
             onChange={(_, newValue) => setActiveTab(newValue)}
@@ -416,6 +425,19 @@ const ProjectList: React.FC<ProjectListProps> = ({
                 textTransform: 'none',
                 fontWeight: 500,
                 fontSize: '0.875rem',
+                color: '#666666',
+                '&.Mui-selected': {
+                  color: '#333333',
+                  fontWeight: 600,
+                },
+                '&:hover': {
+                  color: '#333333',
+                  backgroundColor: 'rgba(0, 0, 0, 0.02)',
+                },
+              },
+              '& .MuiTabs-indicator': {
+                backgroundColor: '#666666',
+                height: 2,
               },
             }}
           >
@@ -425,7 +447,7 @@ const ProjectList: React.FC<ProjectListProps> = ({
         </Box>
 
         {activeTab === 1 && (
-          <Box sx={{ mb: 1 }}>
+          <Box sx={{ mb: 1, flexShrink: 0 }}>
             <TextField
               fullWidth
               size="small"
@@ -435,7 +457,7 @@ const ProjectList: React.FC<ProjectListProps> = ({
               InputProps={{
                 startAdornment: (
                   <InputAdornment position="start">
-                    <SearchIcon sx={{ color: 'text.secondary', fontSize: '0.875rem' }} />
+                    <SearchIcon sx={{ color: '#666666', fontSize: '0.875rem' }} />
                   </InputAdornment>
                 ),
               }}
@@ -443,14 +465,14 @@ const ProjectList: React.FC<ProjectListProps> = ({
                 mb: 1,
                 '& .MuiOutlinedInput-root': {
                   height: 40,
-                  background: 'linear-gradient(145deg, #f7f7f8 0%, #f0f0f1 100%)',
+                  background: 'white',
                   borderRadius: 1,
                   transition: 'all 0.2s ease-in-out',
                   '& input': {
-                    fontSize: '0.75rem',
-                    color: 'text.secondary',
+                    fontSize: '0.875rem',
+                    color: '#333333',
                     '&::placeholder': {
-                      color: 'text.secondary',
+                      color: '#666666',
                       opacity: 0.7,
                     },
                   },
@@ -459,17 +481,17 @@ const ProjectList: React.FC<ProjectListProps> = ({
                     transition: 'all 0.2s ease-in-out',
                   },
                   '&:hover': {
-                    background: 'linear-gradient(145deg, #e6f7f1 0%, #d1f0e6 100%)',
-                    boxShadow: '0 4px 12px rgba(16, 163, 127, 0.1)',
+                    background: 'white',
+                    boxShadow: '0 4px 12px rgba(0, 0, 0, 0.05)',
                     '& fieldset': {
-                      borderColor: 'rgba(16, 163, 127, 0.3)',
+                      borderColor: 'rgba(0, 0, 0, 0.2)',
                     },
                   },
                   '&.Mui-focused': {
-                    background: 'linear-gradient(145deg, #e6f7f1 0%, #d1f0e6 100%)',
-                    boxShadow: '0 4px 12px rgba(16, 163, 127, 0.15)',
+                    background: 'white',
+                    boxShadow: '0 4px 12px rgba(0, 0, 0, 0.08)',
                     '& fieldset': {
-                      borderColor: '#10a37f',
+                      borderColor: '#666666',
                       borderWidth: '1px',
                     },
                   },
@@ -485,12 +507,12 @@ const ProjectList: React.FC<ProjectListProps> = ({
                 input={<OutlinedInput />}
                 renderValue={(selected) => {
                   if (selected.length === 0) {
-                    return <em style={{ color: 'text.secondary', opacity: 0.7, fontSize: '0.75rem' }}>Filter by type</em>;
+                    return <em style={{ color: '#666666', opacity: 0.7, fontSize: '0.875rem' }}>Filter by type</em>;
                   }
                   return (
                     <Typography sx={{ 
-                      fontSize: '0.75rem',
-                      color: 'text.secondary',
+                      fontSize: '0.875rem',
+                      color: '#333333',
                       whiteSpace: 'nowrap',
                       overflow: 'hidden',
                       textOverflow: 'ellipsis'
@@ -501,33 +523,45 @@ const ProjectList: React.FC<ProjectListProps> = ({
                     </Typography>
                   );
                 }}
-                MenuProps={MenuProps}
+                MenuProps={{
+                  ...MenuProps,
+                  PaperProps: {
+                    ...MenuProps.PaperProps,
+                    sx: {
+                      ...MenuProps.PaperProps?.style,
+                      background: 'white',
+                      boxShadow: '0 4px 12px rgba(0, 0, 0, 0.08)',
+                      border: '1px solid rgba(0, 0, 0, 0.1)',
+                      borderRadius: 1,
+                    },
+                  },
+                }}
                 sx={{
                   height: 40,
-                  background: 'linear-gradient(145deg, #f7f7f8 0%, #f0f0f1 100%)',
+                  background: 'white',
                   borderRadius: 1,
                   transition: 'all 0.2s ease-in-out',
                   '& .MuiSelect-select': {
                     py: 1,
-                    fontSize: '0.75rem',
-                    color: 'text.secondary',
+                    fontSize: '0.875rem',
+                    color: '#333333',
                   },
                   '& .MuiOutlinedInput-notchedOutline': {
                     borderColor: 'rgba(0, 0, 0, 0.1)',
                     transition: 'all 0.2s ease-in-out',
                   },
                   '&:hover': {
-                    background: 'linear-gradient(145deg, #e6f7f1 0%, #d1f0e6 100%)',
-                    boxShadow: '0 4px 12px rgba(16, 163, 127, 0.1)',
+                    background: 'white',
+                    boxShadow: '0 4px 12px rgba(0, 0, 0, 0.05)',
                     '& .MuiOutlinedInput-notchedOutline': {
-                      borderColor: 'rgba(16, 163, 127, 0.3)',
+                      borderColor: 'rgba(0, 0, 0, 0.2)',
                     },
                   },
                   '&.Mui-focused': {
-                    background: 'linear-gradient(145deg, #e6f7f1 0%, #d1f0e6 100%)',
-                    boxShadow: '0 4px 12px rgba(16, 163, 127, 0.15)',
+                    background: 'white',
+                    boxShadow: '0 4px 12px rgba(0, 0, 0, 0.08)',
                     '& .MuiOutlinedInput-notchedOutline': {
-                      borderColor: '#10a37f',
+                      borderColor: '#666666',
                       borderWidth: '1px',
                     },
                   },
@@ -543,13 +577,15 @@ const ProjectList: React.FC<ProjectListProps> = ({
                       gap: 1,
                       py: 1,
                       transition: 'all 0.2s ease-in-out',
+                      fontSize: '0.875rem',
+                      color: '#333333',
                       '&:hover': {
-                        background: `linear-gradient(145deg, ${getTypeColor(type)}10 0%, ${getTypeColor(type)}05 100%)`,
+                        background: 'rgba(0, 0, 0, 0.02)',
                       },
                       '&.Mui-selected': {
-                        background: `linear-gradient(145deg, ${getTypeColor(type)}20 0%, ${getTypeColor(type)}15 100%)`,
+                        background: 'rgba(0, 0, 0, 0.04)',
                         '&:hover': {
-                          background: `linear-gradient(145deg, ${getTypeColor(type)}30 0%, ${getTypeColor(type)}25 100%)`,
+                          background: 'rgba(0, 0, 0, 0.06)',
                         },
                       },
                     }}
@@ -565,8 +601,25 @@ const ProjectList: React.FC<ProjectListProps> = ({
           </Box>
         )}
 
-        <Box sx={{ flex: 1, overflow: 'auto' }}>
-          <Grid container spacing={1} sx={{ width: '100%', m: 0 }}>
+        <Box sx={{ 
+          flex: 1, 
+          minHeight: 0, 
+          overflow: 'auto',
+          '&::-webkit-scrollbar': {
+            width: '8px',
+          },
+          '&::-webkit-scrollbar-track': {
+            background: 'transparent',
+          },
+          '&::-webkit-scrollbar-thumb': {
+            background: 'rgba(0, 0, 0, 0.1)',
+            borderRadius: '4px',
+            '&:hover': {
+              background: 'rgba(0, 0, 0, 0.2)',
+            },
+          },
+        }}>
+          <Grid container spacing={1} sx={{ width: '100%', m: 0, px: 1 }}>
             {activeTab === 0 ? (
               projects.map((project) => (
                 <Grid item key={project.id} sx={{ width: '100%', p: 0 }}>
@@ -581,14 +634,14 @@ const ProjectList: React.FC<ProjectListProps> = ({
                       cursor: 'pointer',
                       position: 'relative',
                       background: selectedProject?.id === project.id
-                        ? 'linear-gradient(145deg, #e6f7f1 0%, #d1f0e6 100%)'
-                        : 'white',
+                        ? 'linear-gradient(145deg, #ffffff 0%, #f8f8f9 100%)'
+                        : '#ffffff',
                       border: selectedProject?.id === project.id
-                        ? '1px solid #10a37f'
-                        : '1px solid rgba(0,0,0,0.1)',
+                        ? '2px solid #666666'
+                        : 'none',
                       '&:hover': {
-                        background: 'linear-gradient(145deg, #e6f7f1 0%, #d1f0e6 100%)',
-                        boxShadow: '0 4px 12px rgba(16, 163, 127, 0.1)',
+                        background: 'linear-gradient(145deg, #ffffff 0%, #f8f8f9 100%)',
+                        boxShadow: '0 4px 12px rgba(0, 0, 0, 0.08)',
                       },
                       mb: 0.5,
                       borderRadius: 1,
@@ -644,14 +697,14 @@ const ProjectList: React.FC<ProjectListProps> = ({
                         cursor: 'grab',
                         position: 'relative',
                         background: selectedAction?.id === action.id
-                          ? `linear-gradient(145deg, ${action.isBuiltIn ? '#66666630' : action.color}30 0%, ${action.isBuiltIn ? '#66666620' : action.color}20 100%)`
-                          : `linear-gradient(145deg, ${action.isBuiltIn ? '#66666620' : action.color}20 0%, ${action.isBuiltIn ? '#66666610' : action.color}10 100%)`,
+                          ? 'linear-gradient(145deg, #ffffff 0%, #f8f8f9 100%)'
+                          : '#ffffff',
                         color: action.isBuiltIn ? '#666666' : action.color,
                         border: selectedAction?.id === action.id
                           ? `2px solid ${action.isBuiltIn ? '#666666' : action.color}`
                           : `1px solid ${action.isBuiltIn ? '#66666640' : action.color}40`,
                         '&:hover': {
-                          background: `linear-gradient(145deg, ${action.isBuiltIn ? '#66666630' : action.color}30 0%, ${action.isBuiltIn ? '#66666620' : action.color}20 100%)`,
+                          background: 'linear-gradient(145deg, #ffffff 0%, #f8f8f9 100%)',
                           boxShadow: `0 4px 12px ${action.isBuiltIn ? '#66666620' : action.color}20`,
                         },
                         '&:active': {
@@ -677,17 +730,29 @@ const ProjectList: React.FC<ProjectListProps> = ({
                               label={action.type}
                               size="small"
                               sx={{
-                                height: 20,
-                                fontSize: '0.7rem',
-                                backgroundColor: getTypeColor(action.type),
-                                color: 'white',
+                                height: 22,
+                                fontSize: '0.75rem',
+                                fontWeight: 500,
+                                backgroundColor: '#ffffff',
+                                color: getTypeColor(action.type),
+                                border: `1px solid ${getTypeColor(action.type)}40`,
+                                borderRadius: '8px',
+                                transition: 'all 0.2s ease-in-out',
+                                '&:hover': {
+                                  backgroundColor: '#ffffff',
+                                  borderColor: `${getTypeColor(action.type)}60`,
+                                  transform: 'translateY(-1px)',
+                                  boxShadow: `0 2px 8px ${getTypeColor(action.type)}15`,
+                                },
                                 '& .MuiChip-label': {
-                                  px: 1,
+                                  px: 1.5,
+                                  py: 0.5,
                                 },
                                 '& .MuiChip-icon': {
-                                  color: 'white',
-                                  fontSize: '0.8rem',
-                                  marginLeft: '4px',
+                                  color: getTypeColor(action.type),
+                                  fontSize: '0.9rem',
+                                  marginLeft: '6px',
+                                  marginRight: '-4px',
                                 },
                               }}
                             />
@@ -698,8 +763,9 @@ const ProjectList: React.FC<ProjectListProps> = ({
                                 sx={{
                                   height: 20,
                                   fontSize: '0.7rem',
-                                  backgroundColor: '#666666',
-                                  color: 'white',
+                                  backgroundColor: '#ffffff',
+                                  color: '#666666',
+                                  border: '1px solid rgba(102, 102, 102, 0.3)',
                                   '& .MuiChip-label': {
                                     px: 1,
                                   },
@@ -724,11 +790,23 @@ const ProjectList: React.FC<ProjectListProps> = ({
         PaperProps={{
           sx: {
             borderRadius: 2,
+            background: 'linear-gradient(145deg, #ffffff 0%, #f8f8f9 100%)',
+            boxShadow: '0 8px 24px rgba(0, 0, 0, 0.12)',
           },
         }}
       >
-        <DialogTitle>Create New Project</DialogTitle>
-        <DialogContent>
+        <DialogTitle sx={{ 
+          borderBottom: '1px solid rgba(0, 0, 0, 0.1)',
+          pb: 2,
+          '& .MuiTypography-root': {
+            fontSize: '1.1rem',
+            fontWeight: 600,
+            color: '#333333',
+          },
+        }}>
+          Create New Project
+        </DialogTitle>
+        <DialogContent sx={{ pt: 3 }}>
           <TextField
             autoFocus
             margin="dense"
@@ -736,7 +814,21 @@ const ProjectList: React.FC<ProjectListProps> = ({
             fullWidth
             value={newProjectName}
             onChange={(e) => setNewProjectName(e.target.value)}
-            sx={{ mb: 2 }}
+            sx={{ 
+              mb: 2,
+              '& .MuiOutlinedInput-root': {
+                background: 'white',
+                '& fieldset': {
+                  borderColor: 'rgba(0, 0, 0, 0.1)',
+                },
+                '&:hover fieldset': {
+                  borderColor: 'rgba(0, 0, 0, 0.2)',
+                },
+                '&.Mui-focused fieldset': {
+                  borderColor: '#666666',
+                },
+              },
+            }}
           />
           <TextField
             margin="dense"
@@ -746,13 +838,31 @@ const ProjectList: React.FC<ProjectListProps> = ({
             rows={3}
             value={newProjectDescription}
             onChange={(e) => setNewProjectDescription(e.target.value)}
+            sx={{ 
+              '& .MuiOutlinedInput-root': {
+                background: 'white',
+                '& fieldset': {
+                  borderColor: 'rgba(0, 0, 0, 0.1)',
+                },
+                '&:hover fieldset': {
+                  borderColor: 'rgba(0, 0, 0, 0.2)',
+                },
+                '&.Mui-focused fieldset': {
+                  borderColor: '#666666',
+                },
+              },
+            }}
           />
         </DialogContent>
-        <DialogActions>
+        <DialogActions sx={{ 
+          borderTop: '1px solid rgba(0, 0, 0, 0.1)',
+          px: 3,
+          py: 2,
+        }}>
           <Button 
             onClick={() => setIsCreateDialogOpen(false)}
             sx={{
-              color: '#6e6e80',
+              color: '#666666',
               '&:hover': {
                 backgroundColor: 'rgba(0, 0, 0, 0.04)',
               },
@@ -765,11 +875,17 @@ const ProjectList: React.FC<ProjectListProps> = ({
             variant="contained"
             disabled={!newProjectName}
             sx={{
-              background: 'linear-gradient(145deg, #10a37f 0%, #0d8c6d 100%)',
-              boxShadow: '0 2px 8px rgba(16, 163, 127, 0.2)',
+              background: 'linear-gradient(145deg, #f7f7f8 0%, #f0f0f1 100%)',
+              boxShadow: '0 4px 12px rgba(0, 0, 0, 0.05)',
+              border: '1px solid rgba(0, 0, 0, 0.1)',
+              color: '#666666',
               '&:hover': {
-                background: 'linear-gradient(145deg, #0d8c6d 0%, #0b7a5d 100%)',
-                boxShadow: '0 4px 12px rgba(16, 163, 127, 0.25)',
+                background: 'linear-gradient(145deg, #f0f0f1 0%, #e8e8e9 100%)',
+                boxShadow: '0 6px 16px rgba(0, 0, 0, 0.08)',
+              },
+              '&.Mui-disabled': {
+                background: 'linear-gradient(145deg, #f7f7f8 0%, #f0f0f1 100%)',
+                color: 'rgba(102, 102, 102, 0.5)',
               },
             }}
           >
@@ -786,20 +902,66 @@ const ProjectList: React.FC<ProjectListProps> = ({
           sx: {
             borderRadius: 2,
             minWidth: 500,
+            background: 'linear-gradient(145deg, #ffffff 0%, #f8f8f9 100%)',
+            boxShadow: '0 8px 24px rgba(0, 0, 0, 0.12)',
           },
         }}
       >
-        <DialogTitle>Export Projects</DialogTitle>
-        <DialogContent>
+        <DialogTitle sx={{ 
+          borderBottom: '1px solid rgba(0, 0, 0, 0.1)',
+          pb: 2,
+          '& .MuiTypography-root': {
+            fontSize: '1.1rem',
+            fontWeight: 600,
+            color: '#333333',
+          },
+        }}>
+          Export Projects
+        </DialogTitle>
+        <DialogContent sx={{ pt: 3 }}>
           <Box sx={{ mt: 2 }}>
             <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
-              <Typography variant="subtitle2">Select Projects to Export</Typography>
+              <Typography variant="subtitle2" sx={{ color: '#666666', fontWeight: 600 }}>Select Projects to Export</Typography>
               <Box>
-                <Button size="small" onClick={handleSelectAllProjects}>Select All</Button>
-                <Button size="small" onClick={handleDeselectAllProjects}>Deselect All</Button>
+                <Button 
+                  size="small" 
+                  onClick={handleSelectAllProjects}
+                  sx={{
+                    color: '#666666',
+                    mr: 1,
+                    '&:hover': {
+                      backgroundColor: 'rgba(0, 0, 0, 0.04)',
+                    },
+                  }}
+                >
+                  Select All
+                </Button>
+                <Button 
+                  size="small" 
+                  onClick={handleDeselectAllProjects}
+                  sx={{
+                    color: '#666666',
+                    '&:hover': {
+                      backgroundColor: 'rgba(0, 0, 0, 0.04)',
+                    },
+                  }}
+                >
+                  Deselect All
+                </Button>
               </Box>
             </Box>
-            <List sx={{ maxHeight: 400, overflow: 'auto', bgcolor: 'background.paper', borderRadius: 1 }}>
+            <List sx={{ 
+              maxHeight: 400, 
+              overflow: 'auto', 
+              bgcolor: 'white',
+              borderRadius: 1,
+              border: '1px solid rgba(0, 0, 0, 0.1)',
+              '& .MuiListItemButton-root': {
+                '&:hover': {
+                  backgroundColor: 'rgba(0, 0, 0, 0.02)',
+                },
+              },
+            }}>
               {projects.map((project) => (
                 <ListItem key={project.id} disablePadding>
                   <ListItemButton
@@ -811,10 +973,22 @@ const ProjectList: React.FC<ProjectListProps> = ({
                       checked={selectedProjects.includes(project.id)}
                       tabIndex={-1}
                       disableRipple
+                      sx={{
+                        color: '#666666',
+                        '&.Mui-checked': {
+                          color: '#666666',
+                        },
+                      }}
                     />
                     <ListItemText 
                       primary={project.name}
                       secondary={project.description}
+                      primaryTypographyProps={{
+                        sx: { color: '#333333', fontSize: '0.9rem' }
+                      }}
+                      secondaryTypographyProps={{
+                        sx: { color: '#666666', fontSize: '0.8rem' }
+                      }}
                     />
                   </ListItemButton>
                 </ListItem>
@@ -822,11 +996,15 @@ const ProjectList: React.FC<ProjectListProps> = ({
             </List>
           </Box>
         </DialogContent>
-        <DialogActions>
+        <DialogActions sx={{ 
+          borderTop: '1px solid rgba(0, 0, 0, 0.1)',
+          px: 3,
+          py: 2,
+        }}>
           <Button 
             onClick={() => setIsExportProjectsDialogOpen(false)}
             sx={{
-              color: '#6e6e80',
+              color: '#666666',
               '&:hover': {
                 backgroundColor: 'rgba(0, 0, 0, 0.04)',
               },
@@ -839,11 +1017,17 @@ const ProjectList: React.FC<ProjectListProps> = ({
             variant="contained"
             disabled={selectedProjects.length === 0}
             sx={{
-              background: 'linear-gradient(145deg, #10a37f 0%, #0d8c6d 100%)',
-              boxShadow: '0 2px 8px rgba(16, 163, 127, 0.2)',
+              background: 'linear-gradient(145deg, #f7f7f8 0%, #f0f0f1 100%)',
+              boxShadow: '0 4px 12px rgba(0, 0, 0, 0.05)',
+              border: '1px solid rgba(0, 0, 0, 0.1)',
+              color: '#666666',
               '&:hover': {
-                background: 'linear-gradient(145deg, #0d8c6d 0%, #0b7a5d 100%)',
-                boxShadow: '0 4px 12px rgba(16, 163, 127, 0.25)',
+                background: 'linear-gradient(145deg, #f0f0f1 0%, #e8e8e9 100%)',
+                boxShadow: '0 6px 16px rgba(0, 0, 0, 0.08)',
+              },
+              '&.Mui-disabled': {
+                background: 'linear-gradient(145deg, #f7f7f8 0%, #f0f0f1 100%)',
+                color: 'rgba(102, 102, 102, 0.5)',
               },
             }}
           >
@@ -860,20 +1044,66 @@ const ProjectList: React.FC<ProjectListProps> = ({
           sx: {
             borderRadius: 2,
             minWidth: 500,
+            background: 'linear-gradient(145deg, #ffffff 0%, #f8f8f9 100%)',
+            boxShadow: '0 8px 24px rgba(0, 0, 0, 0.12)',
           },
         }}
       >
-        <DialogTitle>Export Actions</DialogTitle>
-        <DialogContent>
+        <DialogTitle sx={{ 
+          borderBottom: '1px solid rgba(0, 0, 0, 0.1)',
+          pb: 2,
+          '& .MuiTypography-root': {
+            fontSize: '1.1rem',
+            fontWeight: 600,
+            color: '#333333',
+          },
+        }}>
+          Export Actions
+        </DialogTitle>
+        <DialogContent sx={{ pt: 3 }}>
           <Box sx={{ mt: 2 }}>
             <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
-              <Typography variant="subtitle2">Select Actions to Export</Typography>
+              <Typography variant="subtitle2" sx={{ color: '#666666', fontWeight: 600 }}>Select Actions to Export</Typography>
               <Box>
-                <Button size="small" onClick={handleSelectAllActions}>Select All</Button>
-                <Button size="small" onClick={handleDeselectAllActions}>Deselect All</Button>
+                <Button 
+                  size="small" 
+                  onClick={handleSelectAllActions}
+                  sx={{
+                    color: '#666666',
+                    mr: 1,
+                    '&:hover': {
+                      backgroundColor: 'rgba(0, 0, 0, 0.04)',
+                    },
+                  }}
+                >
+                  Select All
+                </Button>
+                <Button 
+                  size="small" 
+                  onClick={handleDeselectAllActions}
+                  sx={{
+                    color: '#666666',
+                    '&:hover': {
+                      backgroundColor: 'rgba(0, 0, 0, 0.04)',
+                    },
+                  }}
+                >
+                  Deselect All
+                </Button>
               </Box>
             </Box>
-            <List sx={{ maxHeight: 400, overflow: 'auto', bgcolor: 'background.paper', borderRadius: 1 }}>
+            <List sx={{ 
+              maxHeight: 400, 
+              overflow: 'auto', 
+              bgcolor: 'white',
+              borderRadius: 1,
+              border: '1px solid rgba(0, 0, 0, 0.1)',
+              '& .MuiListItemButton-root': {
+                '&:hover': {
+                  backgroundColor: 'rgba(0, 0, 0, 0.02)',
+                },
+              },
+            }}>
               {globalActions
                 .filter(action => !action.isBuiltIn)
                 .map((action) => (
@@ -887,10 +1117,22 @@ const ProjectList: React.FC<ProjectListProps> = ({
                         checked={selectedActions.includes(action.id)}
                         tabIndex={-1}
                         disableRipple
+                        sx={{
+                          color: '#666666',
+                          '&.Mui-checked': {
+                            color: '#666666',
+                          },
+                        }}
                       />
                       <ListItemText 
                         primary={action.name}
                         secondary={action.type}
+                        primaryTypographyProps={{
+                          sx: { color: '#333333', fontSize: '0.9rem' }
+                        }}
+                        secondaryTypographyProps={{
+                          sx: { color: '#666666', fontSize: '0.8rem' }
+                        }}
                       />
                     </ListItemButton>
                   </ListItem>
@@ -898,11 +1140,15 @@ const ProjectList: React.FC<ProjectListProps> = ({
             </List>
           </Box>
         </DialogContent>
-        <DialogActions>
+        <DialogActions sx={{ 
+          borderTop: '1px solid rgba(0, 0, 0, 0.1)',
+          px: 3,
+          py: 2,
+        }}>
           <Button 
             onClick={() => setIsExportActionsDialogOpen(false)}
             sx={{
-              color: '#6e6e80',
+              color: '#666666',
               '&:hover': {
                 backgroundColor: 'rgba(0, 0, 0, 0.04)',
               },
@@ -915,11 +1161,17 @@ const ProjectList: React.FC<ProjectListProps> = ({
             variant="contained"
             disabled={selectedActions.length === 0}
             sx={{
-              background: 'linear-gradient(145deg, #10a37f 0%, #0d8c6d 100%)',
-              boxShadow: '0 2px 8px rgba(16, 163, 127, 0.2)',
+              background: 'linear-gradient(145deg, #f7f7f8 0%, #f0f0f1 100%)',
+              boxShadow: '0 4px 12px rgba(0, 0, 0, 0.05)',
+              border: '1px solid rgba(0, 0, 0, 0.1)',
+              color: '#666666',
               '&:hover': {
-                background: 'linear-gradient(145deg, #0d8c6d 0%, #0b7a5d 100%)',
-                boxShadow: '0 4px 12px rgba(16, 163, 127, 0.25)',
+                background: 'linear-gradient(145deg, #f0f0f1 0%, #e8e8e9 100%)',
+                boxShadow: '0 6px 16px rgba(0, 0, 0, 0.08)',
+              },
+              '&.Mui-disabled': {
+                background: 'linear-gradient(145deg, #f7f7f8 0%, #f0f0f1 100%)',
+                color: 'rgba(102, 102, 102, 0.5)',
               },
             }}
           >

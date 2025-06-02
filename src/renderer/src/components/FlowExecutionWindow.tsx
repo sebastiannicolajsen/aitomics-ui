@@ -1431,15 +1431,35 @@ const FlowExecutionWindow: React.FC<FlowExecutionWindowProps> = ({ project, onCl
 
   const handleStop = useCallback(async () => {
     try {
+      // Update UI state immediately to show we're stopping
+      setExecutionState(prev => ({
+        ...prev,
+        status: 'idle',
+        currentStep: 'Terminating flow execution...',
+        logs: [...prev.logs, `[${new Date().toLocaleTimeString()}] Terminating flow execution...`]
+      }));
+
       // Send message to main process to terminate the child process
       await window.electron?.ipcRenderer.invoke('terminate-flow');
+
+      // Update UI state after successful termination
+      setExecutionState(prev => ({
+        ...prev,
+        status: 'idle',
+        currentStep: 'Flow execution terminated',
+        logs: [...prev.logs, `[${new Date().toLocaleTimeString()}] Flow execution terminated`]
+      }));
+
+      // Reset execution state
+      hasExecuted.current = false;
     } catch (error) {
       console.error('Failed to terminate flow:', error);
       setExecutionState(prev => ({
         ...prev,
         status: 'error',
         currentStep: 'Failed to terminate flow',
-        error: error instanceof Error ? error.message : String(error)
+        error: error instanceof Error ? error.message : String(error),
+        logs: [...prev.logs, `[${new Date().toLocaleTimeString()}] Failed to terminate flow: ${error instanceof Error ? error.message : String(error)}`]
       }));
     }
   }, []);
@@ -1559,6 +1579,24 @@ const FlowExecutionWindow: React.FC<FlowExecutionWindowProps> = ({ project, onCl
     return !dividerState?.isCollapsed;
   };
 
+  // Add this helper function after the other helper functions
+  const hasErrorsBetweenDividers = (dividerIndex: number): boolean => {
+    const nextDividerIndex = getNextDividerIndex(dividerIndex);
+    return executionState.logs
+      .slice(dividerIndex + 1, nextDividerIndex)
+      .some(log => {
+        if (typeof log === 'string') {
+          return log.includes('[FLOW_ERROR]');
+        }
+        if (typeof log === 'object') {
+          // Check if this is a flow progress update with an error
+          const flowProgress = executionState.flowProgress.find(f => f.name === log.nodeName);
+          return flowProgress?.hasError || false;
+        }
+        return false;
+      });
+  };
+
   return (
     <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column', bgcolor: '#ffffff' }}>
       {/* Header with Progress - Fixed position */}
@@ -1659,19 +1697,29 @@ const FlowExecutionWindow: React.FC<FlowExecutionWindowProps> = ({ project, onCl
             </IconButton>
           </Tooltip>
           {executionState.status === 'running' && (
-            <Button
-              variant="contained"
-              startIcon={<StopIcon />}
-              onClick={handleStop}
-              sx={{
-                bgcolor: '#dc3545',
-                '&:hover': { bgcolor: '#bb2d3b' },
-                boxShadow: '0 2px 4px rgba(220, 53, 69, 0.2)',
-                borderRadius: '8px',
-              }}
-            >
-              Stop
-            </Button>
+            <Tooltip title="Stop Flow Execution">
+              <span>
+                <Button
+                  variant="contained"
+                  startIcon={<StopIcon />}
+                  onClick={handleStop}
+                  sx={{
+                    bgcolor: '#dc3545',
+                    '&:hover': { 
+                      bgcolor: '#bb2d3b',
+                      boxShadow: '0 2px 8px rgba(220, 53, 69, 0.3)'
+                    },
+                    boxShadow: '0 2px 4px rgba(220, 53, 69, 0.2)',
+                    borderRadius: '8px',
+                    textTransform: 'none',
+                    fontWeight: 500,
+                    px: 2
+                  }}
+                >
+                  Stop Flow
+                </Button>
+              </span>
+            </Tooltip>
           )}
           <IconButton onClick={onClose} sx={{ color: '#666666' }}>
             <CloseIcon />
@@ -1787,7 +1835,7 @@ const FlowExecutionWindow: React.FC<FlowExecutionWindowProps> = ({ project, onCl
                         }}
                         sx={{
                           p: 0.5,
-                          color: '#666666',
+                          color: hasErrorsBetweenDividers(index) ? '#dc3545' : '#666666',
                           '&:hover': {
                             color: '#333333',
                             bgcolor: 'transparent',
@@ -1812,7 +1860,7 @@ const FlowExecutionWindow: React.FC<FlowExecutionWindowProps> = ({ project, onCl
                           sx={{
                             fontFamily: 'monospace',
                             fontSize: '0.875rem',
-                            color: isCollapsed ? '#666666' : '#333333',
+                            color: hasErrorsBetweenDividers(index) ? '#dc3545' : (isCollapsed ? '#666666' : '#333333'),
                             fontWeight: 400,
                             whiteSpace: 'nowrap',
                             overflow: 'hidden',

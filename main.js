@@ -301,14 +301,28 @@ function registerIpcHandlers() {
 
       // Store the child process reference
       currentFlowProcess = spawn(process.execPath, [tempFile], {
-        stdio: ['ignore', 'pipe', 'ignore'],
+        stdio: ['pipe', 'pipe', 'pipe'],
         env: {
           ...process.env,
           NODE_PATH: possibleNodeModulesPaths.join(path.delimiter),
           FORCE_COLOR: '1',
           DEBUG_COLORS: '1'
         },
-        shell: true
+        shell: false,
+        detached: false  // Ensure process is not detached
+      });
+
+      // Ensure all streams are properly handled
+      currentFlowProcess.stdin.on('error', (err) => {
+        console.error('[FLOW_DEBUG] stdin error:', err);
+      });
+
+      currentFlowProcess.stdout.on('error', (err) => {
+        console.error('[FLOW_DEBUG] stdout error:', err);
+      });
+
+      currentFlowProcess.stderr.on('error', (err) => {
+        console.error('[FLOW_DEBUG] stderr error:', err);
       });
 
       return new Promise((resolve, reject) => {
@@ -445,10 +459,19 @@ function registerIpcHandlers() {
   ipcMain.handle('terminate-flow', async () => {
     if (currentFlowProcess) {
       try {
-        // Send termination log to the child process
-        currentFlowProcess.stdin.write(JSON.stringify({ type: 'terminate' }) + '\n');
-        
-        // Give a small delay to allow the log to be processed
+        // First try graceful termination
+        try {
+          // Ensure stdin is writable
+          if (currentFlowProcess.stdin.writable) {
+            currentFlowProcess.stdin.write(JSON.stringify({ type: 'terminate' }) + '\n');
+            // End stdin to ensure the message is sent
+            currentFlowProcess.stdin.end();
+          }
+        } catch (e) {
+          console.error('[FLOW_DEBUG] Error sending terminate message:', e);
+        }
+
+        // Give a small delay for graceful termination
         await new Promise(resolve => setTimeout(resolve, 100));
 
         // Force kill the process and all its children
@@ -461,12 +484,24 @@ function registerIpcHandlers() {
             // Ignore errors if process is already gone
           }
         } else {
-          // On Unix-like systems, use SIGKILL (-9) to ensure termination
+          // On Unix-like systems, try SIGTERM first, then SIGKILL
           try {
-            // First try to kill the process group
-            process.kill(-currentFlowProcess.pid, 'SIGKILL');
+            // First try SIGTERM
+            process.kill(currentFlowProcess.pid, 'SIGTERM');
+            
+            // Wait a bit for graceful termination
+            await new Promise(resolve => setTimeout(resolve, 100));
+            
+            // Check if process is still running
+            try {
+              process.kill(currentFlowProcess.pid, 0);
+              // If we get here, process is still running, use SIGKILL
+              process.kill(currentFlowProcess.pid, 'SIGKILL');
+            } catch (e) {
+              // Process is already gone, which is what we want
+            }
           } catch (e) {
-            // If that fails, try to kill just the process
+            // If SIGTERM fails, try SIGKILL directly
             try {
               process.kill(currentFlowProcess.pid, 'SIGKILL');
             } catch (e2) {
@@ -475,7 +510,7 @@ function registerIpcHandlers() {
           }
         }
 
-        // Double-check if process is still running and force kill if needed
+        // Double-check if process is still running
         try {
           process.kill(currentFlowProcess.pid, 0); // This will throw if process doesn't exist
           // If we get here, process is still running, try one more time
@@ -489,9 +524,19 @@ function registerIpcHandlers() {
           // Process is already gone, which is what we want
         }
 
+        // Ensure all streams are closed
+        try {
+          currentFlowProcess.stdin.destroy();
+          currentFlowProcess.stdout.destroy();
+          currentFlowProcess.stderr.destroy();
+        } catch (e) {
+          // Ignore stream destruction errors
+        }
+
+        // Clear the reference
         currentFlowProcess = null;
       } catch (error) {
-        console.error('Error terminating flow:', error);
+        console.error('[FLOW_DEBUG] Error terminating flow:', error);
         throw error;
       }
     }
@@ -753,34 +798,81 @@ function createWindow() {
   const rendererIconPath = path.join(__dirname, 'src/renderer/public/logo512.png');
   const buildIconPath = path.join(__dirname, 'build/icon.icns');
   
-  console.log('Possible icon paths:', {
-    renderer: {
-      path: rendererIconPath,
-      exists: fs.existsSync(rendererIconPath)
-    },
-    build: {
-      path: buildIconPath,
-      exists: fs.existsSync(buildIconPath)
-    },
-    __dirname: __dirname,
-    cwd: process.cwd()
-  });
+  // Use PNG file directly for development
+  const iconPath = process.env.NODE_ENV === 'development' ? 
+    rendererIconPath : 
+    (process.platform === 'darwin' ? buildIconPath : rendererIconPath);
   
-  // Try to use the renderer icon first, fall back to build icon
-  const iconPath = fs.existsSync(rendererIconPath) ? rendererIconPath : 
-                  fs.existsSync(buildIconPath) ? buildIconPath : undefined;
-  
+  console.log('Environment:', process.env.NODE_ENV);
+  console.log('Platform:', process.platform);
   console.log('Selected icon path:', iconPath);
   
+  // Create window with minimal configuration first
   mainWindow = new BrowserWindow({
     width: 1200,
     height: 800,
-    title: 'Aitomics UI',
-    icon: iconPath,
+    title: 'Aitomics',
+    show: false, // Don't show until ready
+    // Don't set icon in window creation
     webPreferences: {
       nodeIntegration: true,
       contextIsolation: true,
       preload: path.join(__dirname, 'src/renderer/src/preload.js')
+    }
+  });
+
+  // Set app name for macOS
+  if (process.platform === 'darwin') {
+    app.setName('Aitomics');
+  }
+
+  // Set icon after window creation
+  if (iconPath) {
+    try {
+      // Try different methods to set the icon
+      if (process.platform === 'darwin') {
+        // On macOS, try setting the dock icon first
+        if (app.dock) {
+          app.dock.setIcon(iconPath);
+          console.log('Set dock icon');
+        }
+        
+        // Then try setting the window icon
+        mainWindow.setIcon(iconPath);
+        console.log('Set window icon');
+        
+        // Finally, try setting the app icon
+        app.setAppUserModelId('com.aitomics.ui');
+        console.log('Set app model ID');
+      } else {
+        // On other platforms, just set the window icon
+        mainWindow.setIcon(iconPath);
+        console.log('Set window icon (non-macOS)');
+      }
+    } catch (error) {
+      console.error('Error setting icon:', error);
+      // Log more details about the error
+      console.error('Error details:', {
+        message: error.message,
+        code: error.code,
+        path: iconPath,
+        exists: fs.existsSync(iconPath),
+        stats: fs.statSync(iconPath)
+      });
+    }
+  }
+
+  // Show window when ready
+  mainWindow.once('ready-to-show', () => {
+    mainWindow.show();
+    // Try setting icon one more time after window is shown
+    if (iconPath && process.platform === 'darwin') {
+      try {
+        app.dock?.setIcon(iconPath);
+        console.log('Set dock icon after window show');
+      } catch (error) {
+        console.error('Error setting dock icon after show:', error);
+      }
     }
   });
 

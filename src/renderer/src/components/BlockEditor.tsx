@@ -19,7 +19,7 @@ import ReactFlow, {
   getBezierPath,
 } from 'reactflow';
 import 'reactflow/dist/style.css';
-import { Box, Typography, Button, Stack, Drawer, TextField, IconButton, FormControl, InputLabel, Select, MenuItem, Chip, List, ListItem, ListItemText, Dialog, DialogTitle, DialogContent, Tooltip } from '@mui/material';
+import { Box, Typography, Button, Stack, Drawer, TextField, IconButton, FormControl, InputLabel, Select, MenuItem, Chip, List, ListItem, ListItemText, Dialog, DialogTitle, DialogContent, Tooltip, Paper, Slider } from '@mui/material';
 import { Project, Block, BlockType, Action, ActionConfig } from '../types/Project';
 import { builtInActions } from '../actions/builtInActions';
 import DownloadIcon from '@mui/icons-material/Download';
@@ -47,6 +47,9 @@ import FlowExecutionWindow from './FlowExecutionWindow';
 import CodeIcon from '@mui/icons-material/Code';
 import { generateFlowCode } from '../utils/flowCodeGenerator';
 import debounce from 'lodash/debounce';
+import ActionSelector from './ActionSelector';
+import SmartToyIcon from '@mui/icons-material/SmartToy';
+import CheckIcon from '@mui/icons-material/Check';
 
 interface NodeData {
   type: 'import' | 'export' | 'transform' | 'comparison';
@@ -450,7 +453,7 @@ const BlockEditor: React.FC<BlockEditorProps> = ({
   const [nodeContent, setNodeContent] = useState('');
   const [isConnecting, setIsConnecting] = useState(false);
   const [sourceNode, setSourceNode] = useState<Node | null>(null);
-  const [selectedAction, setSelectedAction] = useState<Action | null>(null);
+  const [selectedAction, setSelectedAction] = useState<Action | undefined>(undefined);
   const [isDraggingAction, setIsDraggingAction] = useState(false);
   const [draggedAction, setDraggedAction] = useState<Action | null>(null);
   const [isRunDrawerOpen, setIsRunDrawerOpen] = useState(false);
@@ -596,6 +599,9 @@ const BlockEditor: React.FC<BlockEditorProps> = ({
                   case 'text':
                     defaultValue = '';
                     break;
+                  case 'markdown':
+                    defaultValue = '';
+                    break;
                   case 'number':
                     defaultValue = 0;
                     break;
@@ -651,6 +657,9 @@ const BlockEditor: React.FC<BlockEditorProps> = ({
                 if (cfg.defaultValue === undefined) {
                   switch (cfg.type) {
                     case 'text':
+                      defaultValue = '';
+                      break;
+                    case 'markdown':
                       defaultValue = '';
                       break;
                     case 'number':
@@ -735,7 +744,7 @@ const BlockEditor: React.FC<BlockEditorProps> = ({
         // Reset the drawer state first
         setIsDrawerOpen(false);
         setSelectedNode(null);
-        setSelectedAction(null);
+        setSelectedAction(undefined);
         
         // Set the selected node first
         setSelectedNode(node);
@@ -1679,9 +1688,9 @@ const BlockEditor: React.FC<BlockEditorProps> = ({
         action: action?.name,
         isBuiltIn: action?.isBuiltIn
       });
-      setSelectedAction(action || null);
+      setSelectedAction(action || undefined);
     } else {
-      setSelectedAction(null);
+      setSelectedAction(undefined);
     }
     
     setIsDrawerOpen(true);
@@ -1752,7 +1761,7 @@ const BlockEditor: React.FC<BlockEditorProps> = ({
     // First, ensure we have the latest action from globalActions
     const currentAction = selectedAction ? 
       [...globalActions, ...builtInActions].find(a => a.id === selectedAction.id) : 
-      null;
+      undefined;
 
     console.log('Current action from store:', currentAction);
 
@@ -2167,7 +2176,16 @@ const BlockEditor: React.FC<BlockEditorProps> = ({
             }}
           >
             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-              <Typography variant="h6">
+              <Typography variant="h6" sx={{ 
+                color: selectedNode?.type === 'import' 
+                  ? '#10a37f' 
+                  : selectedNode?.type === 'export' 
+                  ? '#dc3545' 
+                  : selectedNode?.type === 'comparison' 
+                  ? '#673ab7' 
+                  : '#ffc107',
+                fontWeight: 500 
+              }}>
                 Edit {selectedNode?.type ? selectedNode.type.charAt(0).toUpperCase() + selectedNode.type.slice(1) : ''}
               </Typography>
               <IconButton 
@@ -2183,166 +2201,136 @@ const BlockEditor: React.FC<BlockEditorProps> = ({
               </IconButton>
             </Box>
             <Stack spacing={3}>
-              <TextField
-                label="Description"
-                defaultValue={nodeName}
-                onChange={(e) => {
-                  // Update local state immediately
-                  setNodeName(e.target.value);
-                  // Debounce the actual update
-                  debouncedUpdateNodeName(e.target.value);
-                }}
-                fullWidth
-                placeholder="Enter a description for this node..."
-                sx={{ 
-                  '& .MuiOutlinedInput-root': {
-                    transition: 'none',
-                  }
-                }}
-              />
+              <Box>
+                <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 1 }}>
+                  Description
+                </Typography>
+                <Paper
+                  variant="outlined"
+                  sx={{
+                    p: 1.5,
+                    borderRadius: 1,
+                    bgcolor: 'background.paper',
+                    borderColor: selectedNode?.type === 'import' 
+                      ? 'rgba(16, 163, 127, 0.2)'
+                      : selectedNode?.type === 'export' 
+                      ? 'rgba(220, 53, 69, 0.2)'
+                      : selectedNode?.type === 'comparison' 
+                      ? 'rgba(103, 58, 183, 0.2)'
+                      : 'rgba(255, 193, 7, 0.2)',
+                    '&:hover': {
+                      borderColor: selectedNode?.type === 'import' 
+                        ? 'rgba(16, 163, 127, 0.4)'
+                        : selectedNode?.type === 'export' 
+                        ? 'rgba(220, 53, 69, 0.4)'
+                        : selectedNode?.type === 'comparison' 
+                        ? 'rgba(103, 58, 183, 0.4)'
+                        : 'rgba(255, 193, 7, 0.4)',
+                    },
+                  }}
+                >
+                  <TextField
+                    defaultValue={nodeName}
+                    onChange={(e) => {
+                      setNodeName(e.target.value);
+                      debouncedUpdateNodeName(e.target.value);
+                    }}
+                    fullWidth
+                    size="small"
+                    placeholder="Enter a description for this node..."
+                    InputProps={{
+                      startAdornment: (
+                        <Box
+                          sx={{
+                            width: 24,
+                            height: 24,
+                            borderRadius: '50%',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            mr: 1,
+                            background: selectedNode?.type === 'import' 
+                              ? 'linear-gradient(145deg, #10a37f20 0%, #10a37f10 100%)'
+                              : selectedNode?.type === 'export' 
+                              ? 'linear-gradient(145deg, #dc354520 0%, #dc354510 100%)'
+                              : selectedNode?.type === 'comparison' 
+                              ? 'linear-gradient(145deg, #673ab720 0%, #673ab710 100%)'
+                              : 'linear-gradient(145deg, #ffc10720 0%, #ffc10710 100%)',
+                            color: selectedNode?.type === 'import' 
+                              ? '#10a37f'
+                              : selectedNode?.type === 'export' 
+                              ? '#dc3545'
+                              : selectedNode?.type === 'comparison' 
+                              ? '#673ab7'
+                              : '#ffc107',
+                          }}
+                        >
+                          <DataObjectIcon sx={{ fontSize: '1rem' }} />
+                        </Box>
+                      ),
+                      sx: {
+                        '& .MuiOutlinedInput-root': {
+                          '& fieldset': {
+                            border: 'none',
+                          },
+                          '&:hover fieldset': {
+                            border: 'none',
+                          },
+                          '&.Mui-focused fieldset': {
+                            border: 'none',
+                          },
+                        },
+                      },
+                    }}
+                  />
+                </Paper>
+              </Box>
               
               {selectedNode?.type === 'import' && (
                 <Box>
-                  <Button
+                  <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 1 }}>
+                    Input File
+                  </Typography>
+                  <Paper
                     variant="outlined"
-                    fullWidth
-                    startIcon={<UploadIcon />}
-                    onClick={async () => {
-                      if (selectedNode && window.electron) {
-                        const result = await window.electron.ipcRenderer.invoke('show-open-dialog', {
-                          properties: ['openFile']
-                        });
-                        
-                        if (!result.canceled && result.filePaths.length > 0) {
-                          const filePath = result.filePaths[0];
-                          
-                          // Update project blocks
-                          const updatedBlocks = project.blocks.map((block) =>
-                            block.id === selectedNode.id
-                              ? { ...block, file: filePath }
-                              : block
-                          );
-                          
-                          // Update project state
-                          onUpdateProject({
-                            ...project,
-                            blocks: updatedBlocks,
-                            updatedAt: new Date().toISOString(),
-                          });
-
-                          // Update nodes state
-                          setNodes(nodes => nodes.map(n => 
-                            n.id === selectedNode.id 
-                              ? { 
-                                  ...n, 
-                                  data: { 
-                                    ...n.data, 
-                                    file: filePath 
-                                  } 
-                                }
-                              : n
-                          ));
-
-                          // Update selected node data
-                          setSelectedNode({
-                            ...selectedNode,
-                            data: {
-                              ...selectedNode.data,
-                              file: filePath
-                            }
-                          });
-                        }
-                      }
-                    }}
                     sx={{
-                      borderColor: 'rgba(16, 163, 127, 0.2)',
-                      color: '#10a37f',
-                      '&:hover': {
-                        borderColor: '#10a37f',
-                        backgroundColor: 'rgba(16, 163, 127, 0.04)',
-                      },
+                      p: 1.5,
+                      borderRadius: 1,
+                      bgcolor: 'background.paper',
                     }}
                   >
-                    {selectedNode.data.file ? 'Change File' : 'Select File'}
-                  </Button>
-                  {selectedNode.data.file && (
-                    <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
-                      Selected file: {selectedNode.data.file.split('/').pop() || selectedNode.data.file}
-                    </Typography>
-                  )}
-                </Box>
-              )}
-              
-              {selectedNode?.type === 'export' && (
-                <Box>
-                  <Stack spacing={2}>
-                    <TextField
-                      label="Output Filename"
-                      defaultValue={selectedNode.data.outputFilename || ''}
-                      onBlur={(e) => {
-                        if (selectedNode) {
-                          // Update project blocks
-                          const updatedBlocks = project.blocks.map((block) =>
-                            block.id === selectedNode.id
-                              ? { ...block, outputFilename: e.target.value }
-                              : block
-                          );
-                          
-                          // Update project state
-                          onUpdateProject({
-                            ...project,
-                            blocks: updatedBlocks,
-                            updatedAt: new Date().toISOString(),
-                          });
-
-                          // Update nodes state
-                          setNodes(nodes => nodes.map(n => 
-                            n.id === selectedNode.id 
-                              ? { 
-                                  ...n, 
-                                  data: { 
-                                    ...n.data, 
-                                    outputFilename: e.target.value 
-                                  } 
-                                }
-                              : n
-                          ));
-
-                          // Update selected node data
-                          setSelectedNode({
-                            ...selectedNode,
-                            data: {
-                              ...selectedNode.data,
-                              outputFilename: e.target.value
-                            }
-                          });
-                        }
-                      }}
-                      fullWidth
-                      placeholder="Enter output filename..."
-                      sx={{ 
-                        '& .MuiOutlinedInput-root': {
-                          transition: 'none',
-                        }
-                      }}
-                    />
                     <Button
                       variant="outlined"
                       fullWidth
-                      startIcon={<DownloadIcon />}
+                      startIcon={
+                        <Box
+                          sx={{
+                            width: 24,
+                            height: 24,
+                            borderRadius: '50%',
+                            backgroundColor: '#10a37f10',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            color: '#10a37f',
+                          }}
+                        >
+                          <UploadIcon sx={{ fontSize: '1rem' }} />
+                        </Box>
+                      }
                       onClick={async () => {
                         if (selectedNode && window.electron) {
                           const result = await window.electron.ipcRenderer.invoke('show-open-dialog', {
-                            properties: ['openDirectory']
+                            properties: ['openFile']
                           });
                           
                           if (!result.canceled && result.filePaths.length > 0) {
-                            const path = result.filePaths[0];
+                            const filePath = result.filePaths[0];
                             
                             // Update project blocks
                             const updatedBlocks = project.blocks.map((block) =>
                               block.id === selectedNode.id
-                                ? { ...block, outputPath: path }
+                                ? { ...block, file: filePath }
                                 : block
                             );
                             
@@ -2360,7 +2348,7 @@ const BlockEditor: React.FC<BlockEditorProps> = ({
                                     ...n, 
                                     data: { 
                                       ...n.data, 
-                                      outputPath: path 
+                                      file: filePath 
                                     } 
                                   }
                                 : n
@@ -2371,191 +2359,324 @@ const BlockEditor: React.FC<BlockEditorProps> = ({
                               ...selectedNode,
                               data: {
                                 ...selectedNode.data,
-                                outputPath: path
+                                file: filePath
                               }
                             });
                           }
                         }
                       }}
                       sx={{
-                        borderColor: 'rgba(220, 53, 69, 0.2)',
-                        color: '#dc3545',
+                        borderColor: 'rgba(16, 163, 127, 0.2)',
+                        color: '#10a37f',
+                        justifyContent: 'flex-start',
+                        textTransform: 'none',
                         '&:hover': {
-                          borderColor: '#dc3545',
-                          backgroundColor: 'rgba(220, 53, 69, 0.04)',
+                          borderColor: '#10a37f',
+                          backgroundColor: 'rgba(16, 163, 127, 0.04)',
                         },
                       }}
                     >
-                      {selectedNode.data.outputPath ? 'Change Output Folder' : 'Select Output Folder'}
+                      {selectedNode.data.file ? 'Change File' : 'Select File'}
                     </Button>
-                    {selectedNode.data.outputPath && (
-                      <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
-                        Output folder: {selectedNode.data.outputPath}
+                    {selectedNode.data.file && (
+                      <Typography 
+                        variant="body2" 
+                        sx={{ 
+                          mt: 1,
+                          color: '#10a37f',
+                          wordBreak: 'break-all',
+                          whiteSpace: 'normal',
+                          pl: 4
+                        }}
+                      >
+                        {selectedNode.data.file.split('/').pop() || selectedNode.data.file}
                       </Typography>
                     )}
-                  </Stack>
+                  </Paper>
                 </Box>
               )}
               
-              {selectedAction ? (
-                <>
-                  <Box sx={{ mb: 2 }}>
-                    <Typography variant="subtitle2" color="text.secondary">
-                      {selectedAction.description}
-                    </Typography>
-                  </Box>
-                  <ActionConfigPanel
-                    action={selectedAction}
-                    config={selectedNode?.data.config || {}}
-                    onChange={(config) => {
-                      handleConfigChange(config);
-                    }}
-                  />
-                  <Button
+              {selectedNode?.type === 'export' && (
+                <Box>
+                  <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 1 }}>
+                    Output Configuration
+                  </Typography>
+                  <Paper
                     variant="outlined"
-                    color="error"
-                    onClick={() => {
-                      if (!selectedNode) return;
-                      const updatedBlocks = project.blocks.map((block) =>
-                        block.id === selectedNode.id
-                          ? { ...block, actionId: undefined, config: undefined }
-                          : block
-                      );
-                      onUpdateProject({
-                        ...project,
-                        blocks: updatedBlocks,
-                        updatedAt: new Date().toISOString(),
-                      });
-                      setSelectedAction(null);
+                    sx={{
+                      p: 1.5,
+                      borderRadius: 1,
+                      bgcolor: 'background.paper',
                     }}
-                    sx={{ mt: 2 }}
                   >
-                    Remove Action
-                  </Button>
-                </>
-              ) : (
-                <FormControl fullWidth>
-                  <InputLabel>Select Action</InputLabel>
-                  <Select
-                    value=""
-                    label="Select Action"
-                    onChange={(e) => {
-                      const action = [...globalActions, ...builtInActions].find(a => a.id === e.target.value);
+                    <Stack spacing={1.5}>
+                      <TextField
+                        defaultValue={selectedNode.data.outputFilename || ''}
+                        onBlur={(e) => {
+                          if (selectedNode) {
+                            debouncedUpdateOutputFilename(e.target.value);
+                          }
+                        }}
+                        fullWidth
+                        size="small"
+                        placeholder="Enter output filename..."
+                        InputProps={{
+                          startAdornment: (
+                            <Box
+                              sx={{
+                                width: 24,
+                                height: 24,
+                                borderRadius: '50%',
+                                backgroundColor: '#dc354510',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                color: '#dc3545',
+                                mr: 1,
+                              }}
+                            >
+                              <CodeIcon sx={{ fontSize: '1rem' }} />
+                            </Box>
+                          ),
+                          sx: {
+                            '& .MuiOutlinedInput-notchedOutline': {
+                              borderColor: 'transparent',
+                            },
+                            '&:hover .MuiOutlinedInput-notchedOutline': {
+                              borderColor: 'transparent',
+                            },
+                            '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
+                              borderColor: '#dc3545',
+                            },
+                          },
+                        }}
+                      />
+                      <Button
+                        variant="outlined"
+                        fullWidth
+                        startIcon={
+                          <Box
+                            sx={{
+                              width: 24,
+                              height: 24,
+                              borderRadius: '50%',
+                              backgroundColor: '#dc354510',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              color: '#dc3545',
+                            }}
+                          >
+                            <DownloadIcon sx={{ fontSize: '1rem' }} />
+                          </Box>
+                        }
+                        onClick={async () => {
+                          if (selectedNode && window.electron) {
+                            const result = await window.electron.ipcRenderer.invoke('show-open-dialog', {
+                              properties: ['openDirectory']
+                            });
+                            
+                            if (!result.canceled && result.filePaths.length > 0) {
+                              const path = result.filePaths[0];
+                              
+                              // Update project blocks
+                              const updatedBlocks = project.blocks.map((block) =>
+                                block.id === selectedNode.id
+                                  ? { ...block, outputPath: path }
+                                  : block
+                              );
+                              
+                              // Update project state
+                              onUpdateProject({
+                                ...project,
+                                blocks: updatedBlocks,
+                                updatedAt: new Date().toISOString(),
+                              });
+
+                              // Update nodes state
+                              setNodes(nodes => nodes.map(n => 
+                                n.id === selectedNode.id 
+                                  ? { 
+                                      ...n, 
+                                      data: { 
+                                        ...n.data, 
+                                        outputPath: path 
+                                      } 
+                                    }
+                                  : n
+                              ));
+
+                              // Update selected node data
+                              setSelectedNode({
+                                ...selectedNode,
+                                data: {
+                                  ...selectedNode.data,
+                                  outputPath: path
+                                }
+                              });
+                            }
+                          }
+                        }}
+                        sx={{
+                          borderColor: 'rgba(220, 53, 69, 0.2)',
+                          color: '#dc3545',
+                          justifyContent: 'flex-start',
+                          textTransform: 'none',
+                          '&:hover': {
+                            borderColor: '#dc3545',
+                            backgroundColor: 'rgba(220, 53, 69, 0.04)',
+                          },
+                        }}
+                      >
+                        {selectedNode.data.outputPath ? 'Change Output Folder' : 'Select Output Folder'}
+                      </Button>
+                      {selectedNode.data.outputPath && (
+                        <Typography 
+                          variant="body2" 
+                          sx={{ 
+                            color: '#dc3545',
+                            wordBreak: 'break-all',
+                            whiteSpace: 'normal',
+                            pl: 4
+                          }}
+                        >
+                          {selectedNode.data.outputPath}
+                        </Typography>
+                      )}
+                    </Stack>
+                  </Paper>
+                </Box>
+              )}
+              
+              <Box>
+                <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 1 }}>
+                  Action Configuration
+                </Typography>
+                <Paper
+                  variant="outlined"
+                  sx={{
+                    p: 1.5,
+                    borderRadius: 1,
+                    bgcolor: 'background.paper',
+                  }}
+                >
+                  <ActionSelector
+                    value={selectedAction}
+                    onChange={(action) => {
                       if (action) {
                         handleActionSelect(action);
+                      } else {
+                        if (!selectedNode) return;
+                        const updatedBlocks = project.blocks.map((block) =>
+                          block.id === selectedNode.id
+                            ? { ...block, actionId: undefined, config: undefined }
+                            : block
+                        );
+                        onUpdateProject({
+                          ...project,
+                          blocks: updatedBlocks,
+                          updatedAt: new Date().toISOString(),
+                        });
+                        setSelectedAction(undefined);
                       }
                     }}
-                  >
-                    {[...globalActions, ...builtInActions]
-                      .filter(action => {
-                        // Map node types to action types
-                        const typeMap: Record<string, string> = {
-                          'import': 'input',
-                          'export': 'output',
-                          'transform': 'transform',
-                          'comparison': 'comparison'
-                        };
-                        return action.type === typeMap[selectedNode?.type || ''];
-                      })
-                      .map(action => (
-                        <MenuItem key={action.id} value={action.id}>
-                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, width: '100%', justifyContent: 'space-between' }}>
-                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                              <Box
-                                sx={{
-                                  display: 'flex',
-                                  alignItems: 'center',
-                                  justifyContent: 'center',
-                                  width: 24,
-                                  height: 24,
-                                  borderRadius: '50%',
-                                  background: `linear-gradient(145deg, ${action.color}30 0%, ${action.color}20 100%)`,
-                                  color: action.color,
-                                }}
-                              >
-                                {React.createElement(Icons[action.icon.replace(/Icon$/, '') as keyof typeof Icons] || DataObjectIcon, { sx: { fontSize: 16 } })}
-                              </Box>
-                              <Typography>{action.name}</Typography>
-                            </Box>
-                            {action.isBuiltIn && (
-                              <Chip
-                                label="Built-in"
-                                size="small"
-                                sx={{
-                                  backgroundColor: '#666666',
-                                  color: 'white',
-                                  height: 20,
-                                  fontSize: '0.7rem',
-                                  '& .MuiChip-label': {
-                                    px: 1,
-                                  },
-                                }}
-                              />
-                            )}
-                          </Box>
-                        </MenuItem>
-                      ))}
-                  </Select>
-                </FormControl>
-              )}
+                    availableActions={[...globalActions, ...builtInActions]}
+                    nodeType={selectedNode?.type as 'import' | 'export' | 'transform' | 'comparison'}
+                  />
+                  {selectedAction && (
+                    <>
+                      <Box sx={{ mt: 2, mb: 2 }}>
+                        <Typography variant="subtitle2" color="text.secondary">
+                          {selectedAction.description}
+                        </Typography>
+                      </Box>
+                      <ActionConfigPanel
+                        action={selectedAction}
+                        config={selectedNode?.data.config || {}}
+                        onChange={(config) => {
+                          handleConfigChange(config);
+                        }}
+                      />
+                    </>
+                  )}
+                </Paper>
+              </Box>
 
-              <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
+              <Box sx={{ 
+                display: 'flex', 
+                gap: 1.5,
+                mx: 2, // Add margin on both sides
+                justifyContent: 'center' // Center the buttons
+              }}>
                 <Button
                   variant="contained"
                   onClick={handleSaveNode}
+                  startIcon={
+                    <Box
+                      sx={{
+                        width: 24,
+                        height: 24,
+                        borderRadius: '50%',
+                        backgroundColor: 'rgba(255, 255, 255, 0.2)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        color: 'white',
+                      }}
+                    >
+                      <CheckIcon sx={{ fontSize: '1rem' }} />
+                    </Box>
+                  }
                   sx={{
-                    flex: 1,
-                    background: selectedNode?.type === 'import' 
-                      ? 'linear-gradient(145deg, #10a37f 0%, #0d8c6d 100%)'
-                      : selectedNode?.type === 'export'
-                      ? 'linear-gradient(145deg, #dc3545 0%, #bb2d3b 100%)'
-                      : selectedNode?.type === 'comparison'
-                      ? 'linear-gradient(145deg, #673ab7 0%, #5e35b1 100%)'
-                      : 'linear-gradient(145deg, #ffc107 0%, #e6ac00 100%)',
-                    boxShadow: selectedNode?.type === 'import'
-                      ? '0 4px 12px rgba(16, 163, 127, 0.2)'
-                      : selectedNode?.type === 'export'
-                      ? '0 4px 12px rgba(220, 53, 69, 0.2)'
-                      : selectedNode?.type === 'comparison'
-                      ? '0 4px 12px rgba(103, 58, 183, 0.2)'
-                      : '0 4px 12px rgba(255, 193, 7, 0.2)',
-                    borderRadius: 2,
+                    background: 'linear-gradient(145deg, #666666 0%, #4d4d4d 100%)',
+                    boxShadow: '0 4px 12px rgba(0, 0, 0, 0.1)',
+                    textTransform: 'none',
                     '&:hover': {
-                      background: selectedNode?.type === 'import'
-                        ? 'linear-gradient(145deg, #0d8c6d 0%, #0b7a5d 100%)'
-                        : selectedNode?.type === 'export'
-                        ? 'linear-gradient(145deg, #bb2d3b 0%, #a52834 100%)'
-                        : selectedNode?.type === 'comparison'
-                        ? 'linear-gradient(145deg, #5e35b1 0%, #522d99 100%)'
-                        : 'linear-gradient(145deg, #e6ac00 0%, #cc9900 100%)',
-                      boxShadow: selectedNode?.type === 'import'
-                        ? '0 6px 16px rgba(16, 163, 127, 0.25)'
-                        : selectedNode?.type === 'export'
-                        ? '0 6px 16px rgba(220, 53, 69, 0.25)'
-                        : selectedNode?.type === 'comparison'
-                        ? '0 6px 16px rgba(103, 58, 183, 0.25)'
-                        : '0 6px 16px rgba(255, 193, 7, 0.25)',
+                      background: 'linear-gradient(145deg, #4d4d4d 0%, #333333 100%)',
+                      boxShadow: '0 6px 16px rgba(0, 0, 0, 0.15)',
                     },
                   }}
                 >
                   Save Changes
                 </Button>
-                <IconButton
+                <Button
+                  variant="outlined"
                   onClick={handleDeleteNode}
+                  startIcon={
+                    <Box
+                      sx={{
+                        width: 24,
+                        height: 24,
+                        borderRadius: '50%',
+                        backgroundColor: '#dc354510',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        color: '#dc3545',
+                      }}
+                    >
+                      <DeleteIcon sx={{ fontSize: '1rem' }} />
+                    </Box>
+                  }
                   sx={{
+                    borderColor: 'rgba(220, 53, 69, 0.2)',
                     color: '#dc3545',
-                    background: 'linear-gradient(145deg, #f7e6e6 0%, #f0d1d1 100%)',
+                    textTransform: 'none',
+                    background: 'linear-gradient(145deg, #fff 0%, #f8f8f8 100%)',
                     boxShadow: '0 4px 12px rgba(220, 53, 69, 0.1)',
-                    border: '1px solid rgba(220, 53, 69, 0.2)',
                     '&:hover': {
-                      background: 'linear-gradient(145deg, #f0d1d1 0%, #e6b8b8 100%)',
+                      borderColor: '#dc3545',
+                      background: 'linear-gradient(145deg, #f8f8f8 0%, #f0f0f0 100%)',
                       boxShadow: '0 6px 16px rgba(220, 53, 69, 0.15)',
                     },
                   }}
                 >
-                  <DeleteIcon />
-                </IconButton>
+                  Delete
+                </Button>
               </Box>
+
+      
+
             </Stack>
           </Drawer>
           <Drawer
@@ -2589,117 +2710,181 @@ const BlockEditor: React.FC<BlockEditorProps> = ({
             </Box>
 
             <Stack spacing={3}>
-              {/* Input Files Section */}
-              <Box>
-                <Typography variant="subtitle1" sx={{ mb: 2, color: '#7D6E63', fontWeight: 500 }}>
-                  Input Files
-                </Typography>
-                {project.blocks
-                  .filter(block => block.type === 'import' && block.file)
-                  .map(block => (
-                    <Box
-                      key={block.id}
-                      sx={{
-                        p: 2,
-                        mb: 1,
-                        borderRadius: 1,
-                        background: 'linear-gradient(145deg, #f7f5f3 0%, #eae6e3 100%)',
-                        border: '1px solid rgba(125, 110, 99, 0.2)',
-                      }}
-                    >
-                      <Stack direction="row" spacing={1} alignItems="center">
-                        <UploadIcon sx={{ color: '#7D6E63' }} />
-                        <Typography 
-                          variant="body2" 
-                          sx={{ 
-                            color: '#7D6E63',
-                            wordBreak: 'break-all',
-                            whiteSpace: 'normal'
-                          }}
-                        >
-                          {block.file}
-                        </Typography>
-                      </Stack>
-                    </Box>
-                  ))}
-                {project.blocks.filter(block => block.type === 'import' && block.file).length === 0 && (
-                  <Typography variant="body2" color="text.secondary">
-                    No input files selected
-                  </Typography>
-                )}
-              </Box>
-
-              {/* Output Files Section */}
-              <Box>
-                <Typography variant="subtitle1" sx={{ mb: 2, color: '#5C6B73', fontWeight: 500 }}>
-                  Output Files
-                </Typography>
-                {project.blocks
-                  .filter(block => block.type === 'export' && block.outputPath)
-                  .map(block => (
-                    <Box
-                      key={block.id}
-                      sx={{
-                        p: 2,
-                        mb: 1,
-                        borderRadius: 1,
-                        background: 'linear-gradient(145deg, #f3f5f7 0%, #e3e6ea 100%)',
-                        border: '1px solid rgba(92, 107, 115, 0.2)',
-                      }}
-                    >
-                      <Stack direction="row" spacing={1} alignItems="center">
-                        <DownloadIcon sx={{ color: '#5C6B73' }} />
-                        <Typography 
-                          variant="body2" 
-                          sx={{ 
-                            color: '#5C6B73',
-                            wordBreak: 'break-all',
-                            whiteSpace: 'normal'
-                          }}
-                        >
-                          {block.outputFilename || 'output'} → {block.outputPath}
-                        </Typography>
-                      </Stack>
-                    </Box>
-                  ))}
-                {project.blocks.filter(block => block.type === 'export' && block.outputPath).length === 0 && (
-                  <Typography variant="body2" color="text.secondary">
-                    No output files configured
-                  </Typography>
-                )}
-              </Box>
-
               {/* Execution Options */}
               <Box>
-                <FormLabel component="legend" sx={{ mb: 2, color: 'text.primary', fontWeight: 500 }}>
+                <Typography variant="subtitle1" sx={{ mb: 2, color: '#673ab7', fontWeight: 500 }}>
                   Execution Options
-                </FormLabel>
-                <RadioGroup
-                  value={executionMode}
-                  onChange={(e) => setExecutionMode(e.target.value as 'all' | 'custom')}
+                </Typography>
+                <Paper
+                  variant="outlined"
+                  sx={{
+                    p: 2,
+                    borderRadius: 1,
+                    bgcolor: 'background.paper',
+                  }}
                 >
-                  <FormControlLabel
-                    value="all"
-                    control={<Radio />}
-                    label="Process all elements"
-                  />
-                  <FormControlLabel
-                    value="custom"
-                    control={<Radio />}
-                    label="Process specific number of elements"
-                  />
-                </RadioGroup>
-                {executionMode === 'custom' && (
-                  <TextField
-                    type="number"
-                    value={customCount}
-                    onChange={(e) => setCustomCount(Math.max(1, parseInt(e.target.value) || 1))}
-                    inputProps={{ min: 1 }}
-                    sx={{ mt: 2 }}
-                    fullWidth
-                    label="Number of elements"
-                  />
-                )}
+                  <Stack spacing={2}>
+                    <FormControl component="fieldset">
+                      <RadioGroup
+                        value={executionMode}
+                        onChange={(e) => setExecutionMode(e.target.value as 'all' | 'custom')}
+                      >
+                        <FormControlLabel
+                          value="all"
+                          control={
+                            <Radio 
+                              sx={{
+                                color: '#673ab7',
+                                '&.Mui-checked': {
+                                  color: '#673ab7',
+                                },
+                              }}
+                            />
+                          }
+                          label={
+                            <Box sx={{ 
+                              display: 'flex', 
+                              alignItems: 'center',
+                              gap: 1,
+                              color: executionMode === 'all' ? '#673ab7' : 'text.primary'
+                            }}>
+                              <Box
+                                sx={{
+                                  width: 24,
+                                  height: 24,
+                                  borderRadius: '50%',
+                                  backgroundColor: executionMode === 'all' ? '#673ab710' : 'transparent',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'center',
+                                  color: executionMode === 'all' ? '#673ab7' : 'text.secondary',
+                                }}
+                              >
+                                <DataObjectIcon sx={{ fontSize: '1rem' }} />
+                              </Box>
+                              <Typography variant="body2" sx={{ fontWeight: executionMode === 'all' ? 500 : 400 }}>
+                                Process all elements
+                              </Typography>
+                            </Box>
+                          }
+                          sx={{
+                            m: 0,
+                            p: 1.5,
+                            borderRadius: 1,
+                            bgcolor: executionMode === 'all' ? '#673ab708' : 'transparent',
+                            border: '1px solid',
+                            borderColor: executionMode === 'all' ? '#673ab730' : 'transparent',
+                            '&:hover': {
+                              bgcolor: executionMode === 'all' ? '#673ab710' : 'rgba(0, 0, 0, 0.04)',
+                            },
+                          }}
+                        />
+                        <FormControlLabel
+                          value="custom"
+                          control={
+                            <Radio 
+                              sx={{
+                                color: '#673ab7',
+                                '&.Mui-checked': {
+                                  color: '#673ab7',
+                                },
+                              }}
+                            />
+                          }
+                          label={
+                            <Box sx={{ 
+                              display: 'flex', 
+                              alignItems: 'center',
+                              gap: 1,
+                              color: executionMode === 'custom' ? '#673ab7' : 'text.primary'
+                            }}>
+                              <Box
+                                sx={{
+                                  width: 24,
+                                  height: 24,
+                                  borderRadius: '50%',
+                                  backgroundColor: executionMode === 'custom' ? '#673ab710' : 'transparent',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'center',
+                                  color: executionMode === 'custom' ? '#673ab7' : 'text.secondary',
+                                }}
+                              >
+                                <CodeIcon sx={{ fontSize: '1rem' }} />
+                              </Box>
+                              <Typography variant="body2" sx={{ fontWeight: executionMode === 'custom' ? 500 : 400 }}>
+                                Process specific number of elements
+                              </Typography>
+                            </Box>
+                          }
+                          sx={{
+                            m: 0,
+                            p: 1.5,
+                            borderRadius: 1,
+                            bgcolor: executionMode === 'custom' ? '#673ab708' : 'transparent',
+                            border: '1px solid',
+                            borderColor: executionMode === 'custom' ? '#673ab730' : 'transparent',
+                            '&:hover': {
+                              bgcolor: executionMode === 'custom' ? '#673ab710' : 'rgba(0, 0, 0, 0.04)',
+                            },
+                          }}
+                        />
+                      </RadioGroup>
+                    </FormControl>
+
+                    {executionMode === 'custom' && (
+                      <Paper
+                        variant="outlined"
+                        sx={{
+                          p: 1.5,
+                          borderRadius: 1,
+                          bgcolor: 'background.paper',
+                          borderColor: '#673ab730',
+                        }}
+                      >
+                        <TextField
+                          type="number"
+                          value={customCount}
+                          onChange={(e) => setCustomCount(Math.max(1, parseInt(e.target.value) || 1))}
+                          inputProps={{ min: 1 }}
+                          fullWidth
+                          size="small"
+                          placeholder="Enter number of elements"
+                          InputProps={{
+                            startAdornment: (
+                              <Box
+                                sx={{
+                                  width: 24,
+                                  height: 24,
+                                  borderRadius: '50%',
+                                  backgroundColor: '#673ab710',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'center',
+                                  color: '#673ab7',
+                                  mr: 1,
+                                }}
+                              >
+                                <CodeIcon sx={{ fontSize: '1rem' }} />
+                              </Box>
+                            ),
+                            sx: {
+                              '& .MuiOutlinedInput-notchedOutline': {
+                                borderColor: 'transparent',
+                              },
+                              '&:hover .MuiOutlinedInput-notchedOutline': {
+                                borderColor: 'transparent',
+                              },
+                              '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
+                                borderColor: '#673ab7',
+                              },
+                            },
+                          }}
+                        />
+                      </Paper>
+                    )}
+                  </Stack>
+                </Paper>
               </Box>
 
               {/* LLM Configuration */}
@@ -2707,7 +2892,8 @@ const BlockEditor: React.FC<BlockEditorProps> = ({
                 <Typography variant="subtitle1" sx={{ mb: 2, color: '#673ab7', fontWeight: 500 }}>
                   LLM Configuration
                 </Typography>
-                <Box
+                <Paper
+                  variant="outlined"
                   onClick={() => setIsModelDialogOpen(true)}
                   sx={{
                     p: 2,
@@ -2723,7 +2909,21 @@ const BlockEditor: React.FC<BlockEditorProps> = ({
                   }}
                 >
                   <Stack direction="row" spacing={1} alignItems="center">
-                    <Typography variant="body2" color={isLmStudioRunning ? 'text.primary' : 'error'}>
+                    <Box
+                      sx={{
+                        width: 24,
+                        height: 24,
+                        borderRadius: '50%',
+                        backgroundColor: '#673ab7',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        color: 'white',
+                      }}
+                    >
+                      <SmartToyIcon sx={{ fontSize: '1rem' }} />
+                    </Box>
+                    <Typography variant="body2" color={isLmStudioRunning ? 'text.primary' : 'error'} sx={{ flex: 1 }}>
                       {isLoadingModels ? 'Loading models...' : 
                        !isLmStudioRunning ? 'LM Studio is not running' :
                        availableModels.find(m => m.id === llmModel)?.id || 'Select a model'}
@@ -2739,27 +2939,149 @@ const BlockEditor: React.FC<BlockEditorProps> = ({
                       />
                     )}
                   </Stack>
+                </Paper>
+
+                <Box sx={{ mb: 2 }}>
+                  <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 1 }}>
+                    Temperature
+                  </Typography>
+                  <Paper
+                    variant="outlined"
+                    sx={{
+                      p: 1.5,
+                      borderRadius: 1,
+                      bgcolor: 'background.paper',
+                    }}
+                  >
+                    <TextField
+                      type="number"
+                      value={llmTemperature}
+                      onChange={(e) => setLlmTemperature(Math.max(0, Math.min(1, parseFloat(e.target.value) || 0)))}
+                      fullWidth
+                      size="small"
+                      placeholder="0.0 - 1.0"
+                      inputProps={{ 
+                        min: 0,
+                        max: 1,
+                        step: 0.1
+                      }}
+                      InputProps={{
+                        sx: {
+                          '& .MuiOutlinedInput-notchedOutline': {
+                            borderColor: 'transparent',
+                          },
+                          '&:hover .MuiOutlinedInput-notchedOutline': {
+                            borderColor: 'transparent',
+                          },
+                          '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
+                            borderColor: '#673ab7',
+                          },
+                        },
+                      }}
+                    />
+                  </Paper>
                 </Box>
-                <TextField
-                  fullWidth
-                  label="Temperature"
-                  type="number"
-                  value={llmTemperature}
-                  onChange={(e) => setLlmTemperature(Math.max(0, Math.min(2, parseFloat(e.target.value) || 0)))}
-                  inputProps={{ min: 0, max: 2, step: 0.1 }}
-                  sx={{ mb: 2 }}
-                  helperText="Controls randomness: 0 = deterministic, 2 = more creative"
-                />
-                <TextField
-                  fullWidth
-                  label="Max Tokens"
-                  type="number"
-                  value={llmMaxTokens}
-                  onChange={(e) => setLlmMaxTokens(parseInt(e.target.value) || -1)}
-                  inputProps={{ min: -1 }}
-                  sx={{ mb: 2 }}
-                  helperText="Maximum number of tokens to generate (-1 for unlimited)"
-                />
+
+                <Box sx={{ mb: 2 }}>
+                  <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 1 }}>
+                    Max Tokens
+                  </Typography>
+                  <Paper
+                    variant="outlined"
+                    sx={{
+                      p: 1.5,
+                      borderRadius: 1,
+                      bgcolor: 'background.paper',
+                    }}
+                  >
+                    <TextField
+                      type="number"
+                      value={llmMaxTokens}
+                      onChange={(e) => setLlmMaxTokens(parseInt(e.target.value) || -1)}
+                      fullWidth
+                      size="small"
+                      placeholder="Unlimited (-1)"
+                      InputProps={{
+                        sx: {
+                          '& .MuiOutlinedInput-notchedOutline': {
+                            borderColor: 'transparent',
+                          },
+                          '&:hover .MuiOutlinedInput-notchedOutline': {
+                            borderColor: 'transparent',
+                          },
+                          '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
+                            borderColor: '#673ab7',
+                          },
+                        },
+                      }}
+                    />
+                  </Paper>
+                </Box>
+
+                <Box sx={{ mb: 2 }}>
+                  <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 1 }}>
+                    Input/Output Files
+                  </Typography>
+                  <Paper
+                    variant="outlined"
+                    sx={{
+                      p: 2,
+                      borderRadius: 1,
+                      bgcolor: 'background.paper',
+                    }}
+                  >
+                    <Stack spacing={1}>
+                      {project.blocks
+                        .filter(block => block.type === 'import' || block.type === 'export')
+                        .map((block) => (
+                          <Box
+                            key={block.id}
+                            sx={{
+                              p: 1.5,
+                              borderRadius: 1,
+                              bgcolor: 'background.paper',
+                              border: '1px solid',
+                              borderColor: 'divider',
+                              transition: 'all 0.2s ease',
+                              '&:hover': {
+                                bgcolor: 'rgba(0, 0, 0, 0.02)',
+                                borderColor: block.type === 'import' ? '#10a37f30' : '#673ab730',
+                              },
+                            }}
+                          >
+                            <Stack direction="row" spacing={1} alignItems="center">
+                              <Box
+                                sx={{
+                                  width: 24,
+                                  height: 24,
+                                  borderRadius: '50%',
+                                  backgroundColor: block.type === 'import' ? '#10a37f10' : '#673ab710',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'center',
+                                  color: block.type === 'import' ? '#10a37f' : '#673ab7',
+                                }}
+                              >
+                                {block.type === 'import' ? <InputIcon sx={{ fontSize: '1rem' }} /> : <OutputIcon sx={{ fontSize: '1rem' }} />}
+                              </Box>
+                              <Typography 
+                                variant="body2" 
+                                sx={{ 
+                                  flex: 1,
+                                  wordBreak: 'break-all',
+                                  whiteSpace: 'normal',
+                                  color: 'text.primary',
+                                  fontSize: '0.875rem',
+                                }}
+                              >
+                                {block.type === 'import' ? block.file : `${block.outputPath}/${block.outputFilename}`}
+                              </Typography>
+                            </Stack>
+                          </Box>
+                        ))}
+                    </Stack>
+                  </Paper>
+                </Box>
               </Box>
 
               {/* Model Selection Dialog */}
@@ -2775,15 +3097,34 @@ const BlockEditor: React.FC<BlockEditorProps> = ({
               <Button
                 variant="outlined"
                 fullWidth
-                startIcon={<CodeIcon />}
+                startIcon={
+                  <Box
+                    sx={{
+                      width: 24,
+                      height: 24,
+                      borderRadius: '50%',
+                      backgroundColor: '#10a37f10',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      color: '#10a37f',
+                    }}
+                  >
+                    <CodeIcon sx={{ fontSize: '1rem' }} />
+                  </Box>
+                }
                 onClick={handlePreviewCode}
                 sx={{
                   mt: 2,
-                  borderColor: '#10a37f',
+                  borderColor: 'rgba(16, 163, 127, 0.2)',
                   color: '#10a37f',
+                  textTransform: 'none',
+                  background: 'linear-gradient(145deg, #fff 0%, #f8f8f8 100%)',
+                  boxShadow: '0 4px 12px rgba(16, 163, 127, 0.1)',
                   '&:hover': {
-                    borderColor: '#0d8c6d',
-                    backgroundColor: 'rgba(16, 163, 127, 0.04)',
+                    borderColor: '#10a37f',
+                    background: 'linear-gradient(145deg, #f8f8f8 0%, #f0f0f0 100%)',
+                    boxShadow: '0 6px 16px rgba(16, 163, 127, 0.15)',
                   },
                 }}
               >
@@ -2799,11 +3140,27 @@ const BlockEditor: React.FC<BlockEditorProps> = ({
                   <Button
                     variant="contained"
                     fullWidth
-                    startIcon={<PlayArrowIcon />}
+                    startIcon={
+                      <Box
+                        sx={{
+                          width: 24,
+                          height: 24,
+                          borderRadius: '50%',
+                          backgroundColor: 'rgba(255, 255, 255, 0.2)',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          color: 'white',
+                        }}
+                      >
+                        <PlayArrowIcon sx={{ fontSize: '1rem' }} />
+                      </Box>
+                    }
                     onClick={handleRunFlow}
                     disabled={!isLmStudioRunning}
                     sx={{
                       mt: 2,
+                      textTransform: 'none',
                       ...(isLmStudioRunning ? {
                         background: 'linear-gradient(145deg, #10a37f 0%, #0d8c6d 100%)',
                         boxShadow: '0 4px 12px rgba(16, 163, 127, 0.2)',

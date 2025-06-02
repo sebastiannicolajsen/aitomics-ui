@@ -1,24 +1,27 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<svg width="192px" height="192px" viewBox="0 0 192 192" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+<svg width="512px" height="512px" viewBox="0 0 512 512" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
     <title>Group</title>
     <defs>
-        <linearGradient x1="50%" y1="22.9909071%" x2="64.2910141%" y2="83.8729128%" id="linearGradient-1">
+        <linearGradient x1="50%" y1="22.9909071%" x2="64.2616699%" y2="83.8729128%" id="linearGradient-1">
             <stop stop-color="#FFFFFF" offset="0%"></stop>
             <stop stop-color="#88848E" offset="100%"></stop>
         </linearGradient>
-        <linearGradient x1="47.2572149%" y1="36.3713129%" x2="65.1300528%" y2="83.8729128%" id="linearGradient-2">
+        <linearGradient x1="47.2592781%" y1="36.3713129%" x2="65.1186713%" y2="83.8729128%" id="linearGradient-2">
             <stop stop-color="#FFFFFF" offset="0%"></stop>
             <stop stop-color="#88848E" offset="100%"></stop>
         </linearGradient>
     </defs>
     <g id="Page-1" stroke="none" stroke-width="1" fill="none" fill-rule="evenodd">
         <g id="Group">
-            <rect id="Rectangle" fill="#5F5867" x="0" y="0" width="192" height="192" rx="35"></rect>
-            <circle id="Oval" fill="#88848E" cx="122.390438" cy="55.8406375" r="45.8964143"></circle>
-            <circle id="Oval" fill="#88848E" cx="122.390438" cy="135.394422" r="45.8964143"></circle>
-            <path d="M79.1155112,59.9459757 C84.7007954,65.7809067 91.8156298,72.3972204 100.460014,79.7949169 C115.404017,92.5837046 120.423169,83.6307515 147.467834,109.6097 C165.49761,126.928999 160.173455,147.993625 131.495368,172.803577" id="Path" stroke="url(#linearGradient-1)" stroke-width="17"></path>
-            <path d="M81.4103319,19.819943 C87.5789581,26.6782664 95.3458917,32.9482916 104.711133,38.6300188 C124.126758,50.4091374 124.126758,41.0705001 149.762655,69.4836673 C166.853253,88.4257788 161.29747,108.076904 133.095307,128.437043" id="Path" stroke="url(#linearGradient-2)" stroke-width="17" transform="translate(120.423169, 74.128493) scale(1, -1) translate(-120.423169, -74.128493) "></path>
-            <circle id="Oval" fill="#FFFFFF" cx="63.1075697" cy="96" r="47.8087649"></circle>
+            <rect id="Rectangle" x="0" y="0" width="512" height="512"></rect>
+            <rect id="Rectangle" fill="#5F5867" x="51.2" y="51.2" width="409.6" height="409.6" rx="95"></rect>
+            <g id="Group-2" transform="translate(106.000000, 91.000000)">
+                <circle id="Oval" fill="#88848E" cx="204" cy="90" r="90"></circle>
+                <circle id="Oval" fill="#88848E" cx="204" cy="233" r="90"></circle>
+                <path d="M119,103 C128.640571,113.081833 140.921246,124.513772 155.842027,137.295816 C181.636366,159.392809 190.299755,143.923529 236.980638,188.811023 C268.101227,218.73602 258.911382,255.132345 209.411104,298" id="Path" stroke="url(#linearGradient-1)" stroke-width="30"></path>
+                <path d="M123,34 C133.672955,45.8707349 147.111302,56.7232135 163.315039,66.5574358 C196.907948,86.9453333 196.907948,70.7815449 241.26317,119.9605 C270.833317,152.74647 261.220704,186.759636 212.425329,222" id="Path" stroke="url(#linearGradient-2)" stroke-width="30" transform="translate(190.500000, 128.000000) scale(1, -1) translate(-190.500000, -128.000000) "></path>
+                <circle id="Oval" fill="#FFFFFF" cx="85" cy="163" r="85"></circle>
+            </g>
         </g>
     </g>
 </svg>

@@ -6,7 +6,7 @@ export type BlockType = 'import' | 'export' | 'transform' | 'comparison';
 export type ActionType = 'input' | 'output' | 'transform' | 'comparison';
 
 export interface ActionConfig {
-  type: 'text' | 'number' | 'boolean' | 'select' | 'json' | 'list';
+  type: 'text' | 'number' | 'boolean' | 'select' | 'json' | 'list' | 'markdown';
   label: string;
   required: boolean;
   defaultValue?: any;

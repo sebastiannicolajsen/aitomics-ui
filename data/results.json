@@ -31,10 +31,10 @@
     "level": 4
   },
   {
-    "output": "NEUTRAL",
+    "output": "POSITIVE",
     "caller": "aitomic.upperCase",
     "input": {
-      "output": "NEUTRAL",
+      "output": "POSITIVE",
       "caller": "LLM Analysis",
       "input": {
         "output": "I'm happy with my purchase overall. The product is good quality and the price was fair. Shipping was a bit slow though.",
@@ -186,10 +186,10 @@
     "level": 4
   },
   {
-    "output": "POSITIVE",
+    "output": "POSITIVE\n",
     "caller": "aitomic.upperCase",
     "input": {
-      "output": "POSITIVE",
+      "output": "POSITIVE\n",
       "caller": "LLM Analysis",
       "input": {
         "output": "I'm extremely satisfied with my purchase. The product is durable and the service was excellent. Just wish it came in more colors.",

@@ -1143,6 +1143,7 @@ ${inputProperties}
                       <MenuItem value="select">Select</MenuItem>
                       <MenuItem value="json">JSON</MenuItem>
                       <MenuItem value="list">List</MenuItem>
+                      <MenuItem value="markdown">Markdown</MenuItem>
                     </Select>
                   </FormControl>
                   {config.type === 'select' && (

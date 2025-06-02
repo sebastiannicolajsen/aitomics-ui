@@ -12,11 +12,14 @@ import {
   FormControlLabel,
   Button,
   IconButton,
+  Divider,
+  Paper,
 } from '@mui/material';
 import { Action, ActionConfig } from '../types/Project';
 import AddIcon from '@mui/icons-material/Add';
 import DeleteIcon from '@mui/icons-material/Delete';
 import debounce from 'lodash/debounce';
+import MarkdownEditor from './MarkdownEditor';
 
 interface ActionConfigPanelProps {
   action: Action;
@@ -83,144 +86,364 @@ const ActionConfigPanel: React.FC<ActionConfigPanelProps> = ({
         size="small"
         sx={{ 
           '& .MuiOutlinedInput-root': {
+            borderRadius: 1,
             transition: 'none',
-          }
+            '&:hover': {
+              '& > fieldset': {
+                borderColor: 'rgba(0, 0, 0, 0.23)',
+              },
+            },
+          },
         }}
       />
       <IconButton
         size="small"
         onClick={onDelete}
         color="error"
-        sx={{ flexShrink: 0 }}
+        sx={{ 
+          flexShrink: 0,
+          borderRadius: 1,
+          '&:hover': {
+            backgroundColor: 'rgba(220, 53, 69, 0.08)',
+          },
+        }}
       >
         <DeleteIcon />
       </IconButton>
     </Box>
   ), [handleFinalChange]);
 
+  const commonTextFieldStyles = {
+    '& .MuiOutlinedInput-root': {
+      borderRadius: 1,
+      transition: 'none',
+      '& .MuiOutlinedInput-notchedOutline': {
+        borderColor: 'transparent',
+      },
+      '&:hover .MuiOutlinedInput-notchedOutline': {
+        borderColor: 'transparent',
+      },
+      '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
+        borderColor: '#673ab7',
+      },
+    },
+  };
+
+  const commonSelectStyles = {
+    '& .MuiOutlinedInput-root': {
+      borderRadius: 1,
+      transition: 'none',
+      '& .MuiOutlinedInput-notchedOutline': {
+        borderColor: 'transparent',
+      },
+      '&:hover .MuiOutlinedInput-notchedOutline': {
+        borderColor: 'transparent',
+      },
+      '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
+        borderColor: '#673ab7',
+      },
+    },
+    '& .MuiInputLabel-root': {
+      color: 'text.secondary',
+    },
+    '& .MuiInputLabel-root.Mui-focused': {
+      color: '#673ab7',
+    },
+    '& .MuiSelect-icon': {
+      color: 'text.secondary',
+    },
+  };
+
   const renderConfigField = useCallback((cfg: ActionConfig) => {
     switch (cfg.type) {
       case 'text':
         return (
-          <TextField
-            label={cfg.label}
-            value={localValues[cfg.label] || ''}
-            onChange={(e) => handleLocalChange(cfg.label, e.target.value)}
-            onBlur={(e) => handleFinalChange(cfg.label, e.target.value)}
-            fullWidth
-            required={cfg.required}
-            helperText={cfg.description}
-            sx={{ 
-              '& .MuiOutlinedInput-root': {
-                transition: 'none',
-              }
-            }}
-          />
+          <Box>
+            <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 1 }}>
+              {cfg.label}
+            </Typography>
+            <Paper
+              variant="outlined"
+              sx={{
+                p: 1.5,
+                borderRadius: 1,
+                bgcolor: 'background.paper',
+              }}
+            >
+              <TextField
+                value={localValues[cfg.label] || ''}
+                onChange={(e) => handleLocalChange(cfg.label, e.target.value)}
+                onBlur={(e) => handleFinalChange(cfg.label, e.target.value)}
+                fullWidth
+                size="small"
+                placeholder={cfg.description}
+                sx={commonTextFieldStyles}
+              />
+            </Paper>
+            {cfg.description && (
+              <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: 'block' }}>
+                {cfg.description}
+              </Typography>
+            )}
+          </Box>
+        );
+      case 'markdown':
+        return (
+          <Box>
+            <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 1 }}>
+              {cfg.label}
+            </Typography>
+            <Paper
+              variant="outlined"
+              sx={{
+                p: 1.5,
+                borderRadius: 1,
+                bgcolor: 'background.paper',
+              }}
+            >
+              <MarkdownEditor
+                label={cfg.label}
+                value={localValues[cfg.label] || ''}
+                onChange={(value) => {
+                  handleLocalChange(cfg.label, value);
+                  handleFinalChange(cfg.label, value);
+                }}
+                required={cfg.required}
+              />
+            </Paper>
+            {cfg.description && (
+              <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: 'block' }}>
+                {cfg.description}
+              </Typography>
+            )}
+          </Box>
         );
       case 'number':
         return (
-          <TextField
-            label={cfg.label}
-            type="number"
-            value={localValues[cfg.label] || ''}
-            onChange={(e) => handleLocalChange(cfg.label, Number(e.target.value))}
-            onBlur={(e) => handleFinalChange(cfg.label, Number(e.target.value))}
-            fullWidth
-            required={cfg.required}
-            helperText={cfg.description}
-            sx={{ 
-              '& .MuiOutlinedInput-root': {
-                transition: 'none',
-              }
-            }}
-          />
+          <Box>
+            <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 1 }}>
+              {cfg.label}
+            </Typography>
+            <Paper
+              variant="outlined"
+              sx={{
+                p: 1.5,
+                borderRadius: 1,
+                bgcolor: 'background.paper',
+              }}
+            >
+              <TextField
+                type="number"
+                value={localValues[cfg.label] || ''}
+                onChange={(e) => handleLocalChange(cfg.label, Number(e.target.value))}
+                onBlur={(e) => handleFinalChange(cfg.label, Number(e.target.value))}
+                fullWidth
+                size="small"
+                placeholder={cfg.description}
+                sx={commonTextFieldStyles}
+              />
+            </Paper>
+            {cfg.description && (
+              <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: 'block' }}>
+                {cfg.description}
+              </Typography>
+            )}
+          </Box>
         );
       case 'boolean':
         return (
-          <FormControlLabel
-            control={
-              <Switch
-                checked={localValues[cfg.label] || false}
-                onChange={(e) => handleFinalChange(cfg.label, e.target.checked)}
+          <Box>
+            <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 1 }}>
+              {cfg.label}
+            </Typography>
+            <Paper
+              variant="outlined"
+              sx={{
+                p: 1.5,
+                borderRadius: 1,
+                bgcolor: 'background.paper',
+              }}
+            >
+              <FormControlLabel
+                control={
+                  <Switch
+                    checked={localValues[cfg.label] || false}
+                    onChange={(e) => handleFinalChange(cfg.label, e.target.checked)}
+                    sx={{
+                      '& .MuiSwitch-switchBase': {
+                        '&.Mui-checked': {
+                          color: '#673ab7',
+                          '& + .MuiSwitch-track': {
+                            backgroundColor: '#673ab7',
+                            opacity: 0.5,
+                          },
+                        },
+                      },
+                      '& .MuiSwitch-track': {
+                        backgroundColor: 'rgba(0, 0, 0, 0.25)',
+                      },
+                    }}
+                  />
+                }
+                label={cfg.description}
+                sx={{
+                  '& .MuiFormControlLabel-label': {
+                    color: 'text.secondary',
+                  },
+                }}
               />
-            }
-            label={cfg.label}
-          />
+            </Paper>
+          </Box>
         );
       case 'select':
         return (
-          <FormControl fullWidth required={cfg.required}>
-            <InputLabel>{cfg.label}</InputLabel>
-            <Select
-              value={localValues[cfg.label] || ''}
-              label={cfg.label}
-              onChange={(e) => handleFinalChange(cfg.label, e.target.value)}
-              sx={{ 
-                '& .MuiOutlinedInput-root': {
-                  transition: 'none',
-                }
+          <Box>
+            <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 1 }}>
+              {cfg.label}
+            </Typography>
+            <Paper
+              variant="outlined"
+              sx={{
+                p: 1.5,
+                borderRadius: 1,
+                bgcolor: 'background.paper',
               }}
             >
-              {cfg.options?.map((option) => (
-                <MenuItem key={option} value={option}>
-                  {option}
-                </MenuItem>
-              ))}
-            </Select>
-          </FormControl>
+              <FormControl fullWidth size="small">
+                <Select
+                  value={localValues[cfg.label] || ''}
+                  onChange={(e) => handleFinalChange(cfg.label, e.target.value)}
+                  displayEmpty
+                  sx={commonSelectStyles}
+                >
+                  <MenuItem value="" disabled>
+                    <em>Select an option</em>
+                  </MenuItem>
+                  {cfg.options?.map((option) => (
+                    <MenuItem 
+                      key={option} 
+                      value={option}
+                      sx={{
+                        '&:hover': {
+                          backgroundColor: 'rgba(103, 58, 183, 0.08)',
+                        },
+                        '&.Mui-selected': {
+                          backgroundColor: 'rgba(103, 58, 183, 0.12)',
+                          '&:hover': {
+                            backgroundColor: 'rgba(103, 58, 183, 0.16)',
+                          },
+                        },
+                      }}
+                    >
+                      {option}
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+            </Paper>
+            {cfg.description && (
+              <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: 'block' }}>
+                {cfg.description}
+              </Typography>
+            )}
+          </Box>
         );
       case 'json':
         return (
-          <TextField
-            label={cfg.label}
-            value={typeof localValues[cfg.label] === 'object' ? JSON.stringify(localValues[cfg.label], null, 2) : localValues[cfg.label] || ''}
-            onChange={(e) => handleLocalChange(cfg.label, e.target.value)}
-            onBlur={(e) => {
-              try {
-                const jsonValue = JSON.parse(e.target.value);
-                handleFinalChange(cfg.label, jsonValue);
-              } catch {
-                // If JSON is invalid, store as string
-                handleFinalChange(cfg.label, e.target.value);
-              }
-            }}
-            multiline
-            rows={4}
-            fullWidth
-            required={cfg.required}
-            helperText={cfg.description}
-            error={localValues[cfg.label] && typeof localValues[cfg.label] === 'string'}
-            sx={{ 
-              '& .MuiOutlinedInput-root': {
-                transition: 'none',
-              }
-            }}
-          />
+          <Box>
+            <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 1 }}>
+              {cfg.label}
+            </Typography>
+            <Paper
+              variant="outlined"
+              sx={{
+                p: 1.5,
+                borderRadius: 1,
+                bgcolor: 'background.paper',
+              }}
+            >
+              <TextField
+                value={typeof localValues[cfg.label] === 'object' ? JSON.stringify(localValues[cfg.label], null, 2) : localValues[cfg.label] || ''}
+                onChange={(e) => handleLocalChange(cfg.label, e.target.value)}
+                onBlur={(e) => {
+                  try {
+                    const jsonValue = JSON.parse(e.target.value);
+                    handleFinalChange(cfg.label, jsonValue);
+                  } catch {
+                    // If JSON is invalid, store as string
+                    handleFinalChange(cfg.label, e.target.value);
+                  }
+                }}
+                multiline
+                rows={4}
+                fullWidth
+                size="small"
+                placeholder={cfg.description}
+                error={localValues[cfg.label] && typeof localValues[cfg.label] === 'string'}
+                sx={commonTextFieldStyles}
+              />
+            </Paper>
+            {cfg.description && (
+              <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: 'block' }}>
+                {cfg.description}
+              </Typography>
+            )}
+          </Box>
         );
       case 'list':
         const listValue = Array.isArray(localValues[cfg.label]) ? localValues[cfg.label] : [];
         return (
           <Box>
-            <Typography variant="subtitle2" gutterBottom>
+            <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 1 }}>
               {cfg.label}
-              {cfg.required && <span style={{ color: 'error.main' }}> *</span>}
             </Typography>
             <Stack spacing={1}>
               {listValue.map((item: string, index: number) => (
-                <ListItem
+                <Paper
                   key={index}
-                  item={item}
-                  index={index}
-                  onUpdate={(value) => {
-                    const newList = [...listValue];
-                    newList[index] = value;
-                    handleLocalChange(cfg.label, newList);
+                  variant="outlined"
+                  sx={{
+                    p: 1.5,
+                    borderRadius: 1,
+                    bgcolor: 'background.paper',
                   }}
-                  onDelete={() => {
-                    const newList = listValue.filter((_: string, i: number) => i !== index);
-                    handleFinalChange(cfg.label, newList);
-                  }}
-                />
+                >
+                  <Box display="flex" gap={1}>
+                    <TextField
+                      value={item}
+                      onChange={(e) => {
+                        const newList = [...listValue];
+                        newList[index] = e.target.value;
+                        handleLocalChange(cfg.label, newList);
+                      }}
+                      onBlur={(e) => {
+                        const newList = [...listValue];
+                        newList[index] = e.target.value;
+                        handleFinalChange(cfg.label, newList);
+                      }}
+                      fullWidth
+                      size="small"
+                      sx={commonTextFieldStyles}
+                    />
+                    <IconButton
+                      size="small"
+                      onClick={() => {
+                        const newList = listValue.filter((_: string, i: number) => i !== index);
+                        handleFinalChange(cfg.label, newList);
+                      }}
+                      color="error"
+                      sx={{ 
+                        flexShrink: 0,
+                        borderRadius: 1,
+                        '&:hover': {
+                          backgroundColor: 'rgba(220, 53, 69, 0.08)',
+                        },
+                      }}
+                    >
+                      <DeleteIcon />
+                    </IconButton>
+                  </Box>
+                </Paper>
               ))}
               <Button
                 startIcon={<AddIcon />}
@@ -228,7 +451,13 @@ const ActionConfigPanel: React.FC<ActionConfigPanelProps> = ({
                   handleFinalChange(cfg.label, [...listValue, '']);
                 }}
                 size="small"
-                sx={{ alignSelf: 'flex-start' }}
+                sx={{ 
+                  alignSelf: 'flex-start',
+                  color: '#673ab7',
+                  '&:hover': {
+                    backgroundColor: 'rgba(103, 58, 183, 0.08)',
+                  },
+                }}
               >
                 Add Item
               </Button>
@@ -247,16 +476,20 @@ const ActionConfigPanel: React.FC<ActionConfigPanelProps> = ({
 
   return (
     <Box>
-      <Typography variant="h6" gutterBottom>
-        {action.name} Configuration
-      </Typography>
-      <Stack spacing={2}>
-        {action.config.map((cfg) => (
-          <Box key={cfg.label}>
-            {renderConfigField(cfg)}
+      {action.config.length > 0 && (
+        <>
+          <Box sx={{ mb: 2 }}>
+            <Divider />
           </Box>
-        ))}
-      </Stack>
+          <Stack spacing={2}>
+            {action.config.map((cfg) => (
+              <Box key={cfg.label}>
+                {renderConfigField(cfg)}
+              </Box>
+            ))}
+          </Stack>
+        </>
+      )}
     </Box>
   );
 };

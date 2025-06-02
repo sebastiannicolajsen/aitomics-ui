@@ -96,14 +96,14 @@ export function process(config: Config): any {
 }`,
     config: [
       {
-        type: 'text',
+        type: 'markdown',
         label: 'prompt',
         required: true,
-        description: 'The prompt to use for the LLM analysis',
+        description: 'The prompt to use for the LLM analysis. Supports markdown formatting for better organization and readability.',
       }
     ],
     isBuiltIn: true,
-    description: 'Performs LLM analysis using the provided prompt. Uses the aitomics caller to instantiate the analysis. The prompt should be a detailed description of what you want the LLM to analyze.',
+    description: 'Performs LLM analysis using the provided prompt. Uses the aitomics caller to instantiate the analysis. The prompt supports markdown formatting for better organization and readability.',
     wrapInAitomics: false,
   },
   {
