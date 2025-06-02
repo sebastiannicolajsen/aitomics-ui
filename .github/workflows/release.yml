@@ -108,48 +108,49 @@ jobs:
             echo "Listing renderer package files:"
             ls -la src/renderer/package*.json
           fi
-          echo "Cache key for root: ${{ runner.os }}-root-modules-${{ hashFiles('package-lock.json') }}"
-          echo "Cache key for renderer: ${{ runner.os }}-renderer-modules-${{ hashFiles('src/renderer/package-lock.json') }}"
+          echo "Cache keys:"
+          echo "Root cache key: ${{ runner.os }}-root-modules-${{ hashFiles('package-lock.json') }}"
+          echo "Renderer cache key: ${{ runner.os }}-renderer-modules-${{ hashFiles('src/renderer/package-lock.json') }}"
+          echo "NPM cache key: ${{ runner.os }}-npm-cache-${{ hashFiles('**/package-lock.json') }}"
         timeout-minutes: 2
+
+      - name: Cache npm
+        uses: actions/cache@v3
+        id: npm-cache
+        with:
+          path: ~/.npm
+          key: ${{ runner.os }}-npm-cache-${{ hashFiles('**/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-npm-cache-
 
       - name: Cache root node_modules
         uses: actions/cache@v3
-        timeout-minutes: 5
         id: root-cache
-        continue-on-error: true
         with:
-          path: |
-            node_modules
-            ~/.npm
+          path: node_modules
           key: ${{ runner.os }}-root-modules-${{ hashFiles('package-lock.json') }}
           restore-keys: |
             ${{ runner.os }}-root-modules-
-        env:
-          ACTIONS_CACHE_DEBUG: true
-          ACTIONS_RUNNER_DEBUG: true
 
       - name: Cache renderer node_modules
         uses: actions/cache@v3
-        timeout-minutes: 5
         id: renderer-cache
-        continue-on-error: true
         with:
-          path: |
-            src/renderer/node_modules
-            ~/.npm
+          path: src/renderer/node_modules
           key: ${{ runner.os }}-renderer-modules-${{ hashFiles('src/renderer/package-lock.json') }}
           restore-keys: |
             ${{ runner.os }}-renderer-modules-
-        env:
-          ACTIONS_CACHE_DEBUG: true
-          ACTIONS_RUNNER_DEBUG: true
 
       - name: Install root dependencies
-        run: npm install --no-audit --no-fund
+        if: steps.root-cache.outputs.cache-hit != 'true'
+        run: |
+          echo "Installing root dependencies..."
+          npm install --no-audit --no-fund
         env:
           NODE_OPTIONS: "--max-old-space-size=4096"
 
       - name: Install renderer dependencies
+        if: steps.renderer-cache.outputs.cache-hit != 'true'
         run: |
           echo "Starting renderer dependencies installation..."
           echo "Current directory: $(pwd)"
@@ -199,12 +200,16 @@ jobs:
         env:
           NODE_OPTIONS: "--max-old-space-size=4096"
 
+      - name: Install electron
+        run: npm install electron@28.1.0 --save-dev
+        env:
+          NODE_OPTIONS: "--max-old-space-size=4096"
+
       - name: Build/Release Electron app
         uses: samuelmeuli/action-electron-builder@v1
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           release: ${{ startsWith(github.ref, 'refs/tags/v') }}
-          artifact_name: Aitomics-UI-macos-${{ github.ref_name }}
           args: --mac --publish always
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -307,48 +312,49 @@ jobs:
             echo "Listing renderer package files:"
             ls -la src/renderer/package*.json
           fi
-          echo "Cache key for root: ${{ runner.os }}-root-modules-${{ hashFiles('package-lock.json') }}"
-          echo "Cache key for renderer: ${{ runner.os }}-renderer-modules-${{ hashFiles('src/renderer/package-lock.json') }}"
+          echo "Cache keys:"
+          echo "Root cache key: ${{ runner.os }}-root-modules-${{ hashFiles('package-lock.json') }}"
+          echo "Renderer cache key: ${{ runner.os }}-renderer-modules-${{ hashFiles('src/renderer/package-lock.json') }}"
+          echo "NPM cache key: ${{ runner.os }}-npm-cache-${{ hashFiles('**/package-lock.json') }}"
         timeout-minutes: 2
+
+      - name: Cache npm
+        uses: actions/cache@v3
+        id: npm-cache
+        with:
+          path: ~/.npm
+          key: ${{ runner.os }}-npm-cache-${{ hashFiles('**/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-npm-cache-
 
       - name: Cache root node_modules
         uses: actions/cache@v3
-        timeout-minutes: 5
         id: root-cache
-        continue-on-error: true
         with:
-          path: |
-            node_modules
-            ~/.npm
+          path: node_modules
           key: ${{ runner.os }}-root-modules-${{ hashFiles('package-lock.json') }}
           restore-keys: |
             ${{ runner.os }}-root-modules-
-        env:
-          ACTIONS_CACHE_DEBUG: true
-          ACTIONS_RUNNER_DEBUG: true
 
       - name: Cache renderer node_modules
         uses: actions/cache@v3
-        timeout-minutes: 5
         id: renderer-cache
-        continue-on-error: true
         with:
-          path: |
-            src/renderer/node_modules
-            ~/.npm
+          path: src/renderer/node_modules
           key: ${{ runner.os }}-renderer-modules-${{ hashFiles('src/renderer/package-lock.json') }}
           restore-keys: |
             ${{ runner.os }}-renderer-modules-
-        env:
-          ACTIONS_CACHE_DEBUG: true
-          ACTIONS_RUNNER_DEBUG: true
 
       - name: Install root dependencies
-        run: npm install --no-audit --no-fund
+        if: steps.root-cache.outputs.cache-hit != 'true'
+        run: |
+          echo "Installing root dependencies..."
+          npm install --no-audit --no-fund
         env:
           NODE_OPTIONS: "--max-old-space-size=4096"
 
       - name: Install renderer dependencies
+        if: steps.renderer-cache.outputs.cache-hit != 'true'
         run: |
           echo "Starting renderer dependencies installation..."
           echo "Current directory: $(pwd)"
@@ -398,12 +404,16 @@ jobs:
         env:
           NODE_OPTIONS: "--max-old-space-size=4096"
 
+      - name: Install electron
+        run: npm install electron@28.1.0 --save-dev
+        env:
+          NODE_OPTIONS: "--max-old-space-size=4096"
+
       - name: Build/Release Electron app
         uses: samuelmeuli/action-electron-builder@v1
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           release: ${{ startsWith(github.ref, 'refs/tags/v') }}
-          artifact_name: Aitomics-UI-windows-${{ github.ref_name }}
           args: --win --publish always
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
