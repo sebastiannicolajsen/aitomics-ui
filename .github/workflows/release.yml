@@ -13,13 +13,12 @@ permissions:
 
 # Add job timeout
 jobs:
-  macos-release:
-    runs-on: macos-latest
+  build-common:
+    runs-on: macos-latest  # Use macOS for the common build as it can handle both platforms
     timeout-minutes: 30
     env:
       ACTIONS_RUNNER_DEBUG: true
       ACTIONS_STEP_DEBUG: true
-      GITHUB_ACTIONS_RUNNER_EXTRA_USER_AGENT: "electron-builder-action"
       NPM_CONFIG_FETCH_TIMEOUT: 300000
       NPM_CONFIG_FETCH_RETRIES: 5
       NPM_CONFIG_FETCH_RETRY_FACTOR: 2
@@ -33,90 +32,13 @@ jobs:
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
-        timeout-minutes: 5
         with:
           node-version: '20'
-          # Remove the built-in npm cache as we're using our own
           cache: ''
-
-      - name: Debug environment
-        run: |
-          echo "Runner environment:"
-          echo "Runner OS: $RUNNER_OS"
-          echo "Runner temp: $RUNNER_TEMP"
-          echo "Runner tool cache: $RUNNER_TOOL_CACHE"
-          echo "GitHub workspace: $GITHUB_WORKSPACE"
-          echo "GitHub action path: $GITHUB_ACTION_PATH"
-          echo "GitHub event name: $GITHUB_EVENT_NAME"
-          echo "GitHub event path: $GITHUB_EVENT_PATH"
-          echo "GitHub workflow: $GITHUB_WORKFLOW"
-          echo "GitHub job: $GITHUB_JOB"
-          echo "GitHub run id: $GITHUB_RUN_ID"
-          echo "GitHub run number: $GITHUB_RUN_NUMBER"
-          echo "GitHub run attempt: $GITHUB_RUN_ATTEMPT"
-          echo "GitHub actor: $GITHUB_ACTOR"
-          echo "GitHub repository: $GITHUB_REPOSITORY"
-          echo "GitHub ref: $GITHUB_REF"
-          echo "GitHub ref name: $GITHUB_REF_NAME"
-          echo "GitHub ref type: $GITHUB_REF_TYPE"
-          echo "GitHub head ref: $GITHUB_HEAD_REF"
-          echo "GitHub base ref: $GITHUB_BASE_REF"
-          echo "GitHub server url: $GITHUB_SERVER_URL"
-          echo "GitHub api url: $GITHUB_API_URL"
-          echo "GitHub graphql url: $GITHUB_GRAPHQL_URL"
-          echo "GitHub workspace: $GITHUB_WORKSPACE"
-          echo "GitHub action: $GITHUB_ACTION"
-          echo "GitHub action path: $GITHUB_ACTION_PATH"
-          echo "GitHub action repository: $GITHUB_ACTION_REPOSITORY"
-          echo "GitHub action ref: $GITHUB_ACTION_REF"
-          echo "GitHub event path: $GITHUB_EVENT_PATH"
-          echo "GitHub step summary: $GITHUB_STEP_SUMMARY"
-          echo "GitHub state: $GITHUB_STATE"
-          echo "GitHub output: $GITHUB_OUTPUT"
-          echo "GitHub environment file: $GITHUB_ENV"
-          echo "GitHub path: $GITHUB_PATH"
-          echo "GitHub token: $GITHUB_TOKEN"
-          echo "GitHub server url: $GITHUB_SERVER_URL"
-          echo "GitHub api url: $GITHUB_API_URL"
-          echo "GitHub graphql url: $GITHUB_GRAPHQL_URL"
-          echo "GitHub workspace: $GITHUB_WORKSPACE"
-          echo "GitHub action: $GITHUB_ACTION"
-          echo "GitHub action path: $GITHUB_ACTION_PATH"
-          echo "GitHub action repository: $GITHUB_ACTION_REPOSITORY"
-          echo "GitHub action ref: $GITHUB_ACTION_REF"
-          echo "GitHub event path: $GITHUB_EVENT_PATH"
-          echo "GitHub step summary: $GITHUB_STEP_SUMMARY"
-          echo "GitHub state: $GITHUB_STATE"
-          echo "GitHub output: $GITHUB_OUTPUT"
-          echo "GitHub environment file: $GITHUB_ENV"
-          echo "GitHub path: $GITHUB_PATH"
-          echo "GitHub token: $GITHUB_TOKEN"
-          echo "Runner environment:"
-          env | sort
-        timeout-minutes: 2
-
-      - name: Debug cache paths
-        run: |
-          echo "Current directory: $(pwd)"
-          echo "Listing package files:"
-          if [ "$RUNNER_OS" == "Windows" ]; then
-            dir package*.json
-            echo "Listing renderer package files:"
-            dir src\renderer\package*.json
-          else
-            ls -la package*.json
-            echo "Listing renderer package files:"
-            ls -la src/renderer/package*.json
-          fi
-          echo "Cache keys:"
-          echo "Root cache key: ${{ runner.os }}-root-modules-${{ hashFiles('package-lock.json') }}"
-          echo "Renderer cache key: ${{ runner.os }}-renderer-modules-${{ hashFiles('src/renderer/package-lock.json') }}"
-          echo "NPM cache key: ${{ runner.os }}-npm-cache-${{ hashFiles('**/package-lock.json') }}"
-        timeout-minutes: 2
+        timeout-minutes: 5
 
       - name: Cache npm
         uses: actions/cache@v3
-        id: npm-cache
         with:
           path: ~/.npm
           key: ${{ runner.os }}-npm-cache-${{ hashFiles('**/package-lock.json') }}
@@ -125,7 +47,6 @@ jobs:
 
       - name: Cache root node_modules
         uses: actions/cache@v3
-        id: root-cache
         with:
           path: node_modules
           key: ${{ runner.os }}-root-modules-${{ hashFiles('package-lock.json') }}
@@ -134,7 +55,6 @@ jobs:
 
       - name: Cache renderer node_modules
         uses: actions/cache@v3
-        id: renderer-cache
         with:
           path: src/renderer/node_modules
           key: ${{ runner.os }}-renderer-modules-${{ hashFiles('src/renderer/package-lock.json') }}
@@ -152,32 +72,8 @@ jobs:
       - name: Install renderer dependencies
         if: steps.renderer-cache.outputs.cache-hit != 'true'
         run: |
-          echo "Starting renderer dependencies installation..."
-          echo "Current directory: $(pwd)"
-          echo "Listing src/renderer contents:"
-          if [ "$RUNNER_OS" == "Windows" ]; then
-            dir src\renderer
-            cd src\renderer
-            echo "Changed to renderer directory: $(pwd)"
-            echo "Listing package files:"
-            dir package*.json
-          else
-            ls -la src/renderer
-            cd src/renderer
-            echo "Changed to renderer directory: $(pwd)"
-            echo "Listing package files:"
-            ls -la package*.json
-          fi
-          
-          echo "Installing dependencies (this may take a few minutes)..."
+          cd src/renderer
           npm install --no-audit --no-fund --no-progress
-          
-          echo "Installation complete. Verifying node_modules..."
-          if [ "$RUNNER_OS" == "Windows" ]; then
-            dir node_modules | Select-Object -First 5
-          else
-            ls -la node_modules | head -n 5
-          fi
           cd ../..
         env:
           NODE_OPTIONS: "--max-old-space-size=4096"
@@ -186,8 +82,6 @@ jobs:
         run: |
           echo "Installing electron..."
           npm install electron@28.1.0 --save-exact
-          echo "Verifying electron installation..."
-          npm list electron
         env:
           NODE_OPTIONS: "--max-old-space-size=4096"
 
@@ -209,295 +103,99 @@ jobs:
       - name: Build preload script
         run: npm run build-preload
 
-      - name: Clean dist directory
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: build-artifacts
+          path: |
+            src/renderer/build
+            src/renderer/src/preload.js
+            build/flow-dependencies
+            node_modules
+            package.json
+            package-lock.json
+
+  package-macos:
+    needs: build-common
+    runs-on: macos-latest
+    timeout-minutes: 30
+    steps:
+      - name: Download build artifacts
+        uses: actions/download-artifact@v3
+        with:
+          name: build-artifacts
+          path: macos-workspace
+
+      - name: Setup workspace
         run: |
-          echo "Cleaning dist directory and app contents..."
-          # Clean dist directory
-          Remove-Item -Recurse -Force dist -ErrorAction SilentlyContinue
-          
-          # Clean the target app directory for macOS
-          if ($env:RUNNER_OS -eq "macOS") {
-            $appPath = "dist/mac-arm64/Aitomics UI.app"
-            if (Test-Path $appPath) {
-              Remove-Item -Recurse -Force $appPath
-            }
-            # Also clean any existing Resources directory
-            $resourcesPath = "dist/mac-arm64/Aitomics UI.app/Contents/Resources"
-            if (Test-Path $resourcesPath) {
-              Remove-Item -Recurse -Force $resourcesPath
-            }
-          }
-          
-          # Clean the target app directory for Windows
-          if ($env:RUNNER_OS -eq "Windows") {
-            $winAppPath = "dist/win-unpacked"
-            if (Test-Path $winAppPath) {
-              Remove-Item -Recurse -Force $winAppPath
-            }
-          }
-          
-          echo "Cleanup complete"
-        shell: pwsh  # Use PowerShell for both Windows and Unix-like systems
+          cd macos-workspace
+          mkdir -p build dist
 
       - name: Install electron-builder
-        run: npm install -g electron-builder@26.0.12
-        env:
-          NODE_OPTIONS: "--max-old-space-size=4096"
+        run: cd macos-workspace && npm install -g electron-builder@26.0.12
+
+      - name: Create temporary package.json
+        run: |
+          cd macos-workspace
+          cp package.json package.json.bak
+          jq '.scripts.build = "echo Skipping build as it was already done in build-common"' package.json > package.json.tmp
+          mv package.json.tmp package.json
 
       - name: Build/Release Electron app
         uses: samuelmeuli/action-electron-builder@v1
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           release: ${{ startsWith(github.ref, 'refs/tags/v') }}
-          args: --mac --publish always
+          args: --mac --publish always --dir
+          working-directory: macos-workspace
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           NODE_ENV: production
           ELECTRON_BUILDER_ALLOW_UNRESOLVED_DEPENDENCIES: true
           ELECTRON_VERSION: "28.1.0"
 
-  windows-release:
+      - name: Restore package.json
+        if: always()
+        run: cd macos-workspace && mv package.json.bak package.json
+
+  package-windows:
+    needs: build-common
     runs-on: windows-latest
     timeout-minutes: 30
-    env:
-      ACTIONS_RUNNER_DEBUG: true
-      ACTIONS_STEP_DEBUG: true
-      GITHUB_ACTIONS_RUNNER_EXTRA_USER_AGENT: "electron-builder-action"
-      NPM_CONFIG_FETCH_TIMEOUT: 300000
-      NPM_CONFIG_FETCH_RETRIES: 5
-      NPM_CONFIG_FETCH_RETRY_FACTOR: 2
-      NPM_CONFIG_FETCH_RETRY_MINTIMEOUT: 10000
-      NPM_CONFIG_FETCH_RETRY_MAXTIMEOUT: 60000
-
     steps:
-      - name: Check out Git repository
-        uses: actions/checkout@v3
-        timeout-minutes: 5
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        timeout-minutes: 5
+      - name: Download build artifacts
+        uses: actions/download-artifact@v3
         with:
-          node-version: '20'
-          # Remove the built-in npm cache as we're using our own
-          cache: ''
+          name: build-artifacts
+          path: windows-workspace
 
-      - name: Debug environment
+      - name: Setup workspace
         run: |
-          echo "Runner environment:"
-          echo "Runner OS: $RUNNER_OS"
-          echo "Runner temp: $RUNNER_TEMP"
-          echo "Runner tool cache: $RUNNER_TOOL_CACHE"
-          echo "GitHub workspace: $GITHUB_WORKSPACE"
-          echo "GitHub action path: $GITHUB_ACTION_PATH"
-          echo "GitHub event name: $GITHUB_EVENT_NAME"
-          echo "GitHub event path: $GITHUB_EVENT_PATH"
-          echo "GitHub workflow: $GITHUB_WORKFLOW"
-          echo "GitHub job: $GITHUB_JOB"
-          echo "GitHub run id: $GITHUB_RUN_ID"
-          echo "GitHub run number: $GITHUB_RUN_NUMBER"
-          echo "GitHub run attempt: $GITHUB_RUN_ATTEMPT"
-          echo "GitHub actor: $GITHUB_ACTOR"
-          echo "GitHub repository: $GITHUB_REPOSITORY"
-          echo "GitHub ref: $GITHUB_REF"
-          echo "GitHub ref name: $GITHUB_REF_NAME"
-          echo "GitHub ref type: $GITHUB_REF_TYPE"
-          echo "GitHub head ref: $GITHUB_HEAD_REF"
-          echo "GitHub base ref: $GITHUB_BASE_REF"
-          echo "GitHub server url: $GITHUB_SERVER_URL"
-          echo "GitHub api url: $GITHUB_API_URL"
-          echo "GitHub graphql url: $GITHUB_GRAPHQL_URL"
-          echo "GitHub workspace: $GITHUB_WORKSPACE"
-          echo "GitHub action: $GITHUB_ACTION"
-          echo "GitHub action path: $GITHUB_ACTION_PATH"
-          echo "GitHub action repository: $GITHUB_ACTION_REPOSITORY"
-          echo "GitHub action ref: $GITHUB_ACTION_REF"
-          echo "GitHub event path: $GITHUB_EVENT_PATH"
-          echo "GitHub step summary: $GITHUB_STEP_SUMMARY"
-          echo "GitHub state: $GITHUB_STATE"
-          echo "GitHub output: $GITHUB_OUTPUT"
-          echo "GitHub environment file: $GITHUB_ENV"
-          echo "GitHub path: $GITHUB_PATH"
-          echo "GitHub token: $GITHUB_TOKEN"
-          echo "GitHub server url: $GITHUB_SERVER_URL"
-          echo "GitHub api url: $GITHUB_API_URL"
-          echo "GitHub graphql url: $GITHUB_GRAPHQL_URL"
-          echo "GitHub workspace: $GITHUB_WORKSPACE"
-          echo "GitHub action: $GITHUB_ACTION"
-          echo "GitHub action path: $GITHUB_ACTION_PATH"
-          echo "GitHub action repository: $GITHUB_ACTION_REPOSITORY"
-          echo "GitHub action ref: $GITHUB_ACTION_REF"
-          echo "GitHub event path: $GITHUB_EVENT_PATH"
-          echo "GitHub step summary: $GITHUB_STEP_SUMMARY"
-          echo "GitHub state: $GITHUB_STATE"
-          echo "GitHub output: $GITHUB_OUTPUT"
-          echo "GitHub environment file: $GITHUB_ENV"
-          echo "GitHub path: $GITHUB_PATH"
-          echo "GitHub token: $GITHUB_TOKEN"
-          echo "Runner environment:"
-          env | sort
-        timeout-minutes: 2
-
-      - name: Debug cache paths
-        shell: pwsh  # Explicitly use PowerShell
-        run: |
-          echo "Current directory: $(pwd)"
-          echo "Listing package files:"
-          if ($env:RUNNER_OS -eq "Windows") {
-            Get-ChildItem package*.json
-            echo "Listing renderer package files:"
-            Get-ChildItem src\renderer\package*.json
-          } else {
-            ls -la package*.json
-            echo "Listing renderer package files:"
-            ls -la src/renderer/package*.json
-          }
-          echo "Cache keys:"
-          echo "Root cache key: ${{ runner.os }}-root-modules-${{ hashFiles('package-lock.json') }}"
-          echo "Renderer cache key: ${{ runner.os }}-renderer-modules-${{ hashFiles('src/renderer/package-lock.json') }}"
-          echo "NPM cache key: ${{ runner.os }}-npm-cache-${{ hashFiles('**/package-lock.json') }}"
-        timeout-minutes: 2
-
-      - name: Cache npm
-        uses: actions/cache@v3
-        id: npm-cache
-        with:
-          path: ~/.npm
-          key: ${{ runner.os }}-npm-cache-${{ hashFiles('**/package-lock.json') }}
-          restore-keys: |
-            ${{ runner.os }}-npm-cache-
-
-      - name: Cache root node_modules
-        uses: actions/cache@v3
-        id: root-cache
-        with:
-          path: node_modules
-          key: ${{ runner.os }}-root-modules-${{ hashFiles('package-lock.json') }}
-          restore-keys: |
-            ${{ runner.os }}-root-modules-
-
-      - name: Cache renderer node_modules
-        uses: actions/cache@v3
-        id: renderer-cache
-        with:
-          path: src/renderer/node_modules
-          key: ${{ runner.os }}-renderer-modules-${{ hashFiles('src/renderer/package-lock.json') }}
-          restore-keys: |
-            ${{ runner.os }}-renderer-modules-
-
-      - name: Install root dependencies
-        if: steps.root-cache.outputs.cache-hit != 'true'
-        run: |
-          echo "Installing root dependencies..."
-          npm install --no-audit --no-fund
-        env:
-          NODE_OPTIONS: "--max-old-space-size=4096"
-
-      - name: Install renderer dependencies
-        if: steps.renderer-cache.outputs.cache-hit != 'true'
-        shell: pwsh  # Explicitly use PowerShell
-        run: |
-          echo "Starting renderer dependencies installation..."
-          echo "Current directory: $(pwd)"
-          echo "Listing src/renderer contents:"
-          if ($env:RUNNER_OS -eq "Windows") {
-            Get-ChildItem src\renderer
-            Set-Location src\renderer
-            echo "Changed to renderer directory: $(pwd)"
-            echo "Listing package files:"
-            Get-ChildItem package*.json
-          } else {
-            ls -la src/renderer
-            cd src/renderer
-            echo "Changed to renderer directory: $(pwd)"
-            echo "Listing package files:"
-            ls -la package*.json
-          }
-          
-          echo "Installing dependencies (this may take a few minutes)..."
-          npm install --no-audit --no-fund --no-progress
-          
-          echo "Installation complete. Verifying node_modules..."
-          if ($env:RUNNER_OS -eq "Windows") {
-            Get-ChildItem node_modules | Select-Object -First 5
-          } else {
-            ls -la node_modules | head -n 5
-          }
-          Set-Location ../..
-        env:
-          NODE_OPTIONS: "--max-old-space-size=4096"
-
-      - name: Install electron
-        run: |
-          echo "Installing electron..."
-          npm install electron@28.1.0 --save-exact
-          echo "Verifying electron installation..."
-          npm list electron
-        env:
-          NODE_OPTIONS: "--max-old-space-size=4096"
-
-      - name: Prepare flow dependencies
-        shell: pwsh  # Explicitly use PowerShell for Windows
-        run: npm run prepare-flow-deps
-        env:
-          NODE_OPTIONS: "--max-old-space-size=4096"
-
-      - name: Build renderer
-        run: |
-          cd src/renderer
-          npm run build
-          cd ../..
-        env:
-          NODE_OPTIONS: "--max-old-space-size=4096"
-          CI: false
-          GENERATE_SOURCEMAP: false
-
-      - name: Build preload script
-        run: npm run build-preload
-
-      - name: Clean dist directory
-        run: |
-          echo "Cleaning dist directory and app contents..."
-          # Clean dist directory
-          Remove-Item -Recurse -Force dist -ErrorAction SilentlyContinue
-          
-          # Clean the target app directory for macOS
-          if ($env:RUNNER_OS -eq "macOS") {
-            $appPath = "dist/mac-arm64/Aitomics UI.app"
-            if (Test-Path $appPath) {
-              Remove-Item -Recurse -Force $appPath
-            }
-            # Also clean any existing Resources directory
-            $resourcesPath = "dist/mac-arm64/Aitomics UI.app/Contents/Resources"
-            if (Test-Path $resourcesPath) {
-              Remove-Item -Recurse -Force $resourcesPath
-            }
-          }
-          
-          # Clean the target app directory for Windows
-          if ($env:RUNNER_OS -eq "Windows") {
-            $winAppPath = "dist/win-unpacked"
-            if (Test-Path $winAppPath) {
-              Remove-Item -Recurse -Force $winAppPath
-            }
-          }
-          
-          echo "Cleanup complete"
-        shell: pwsh  # Use PowerShell for both Windows and Unix-like systems
+          cd windows-workspace
+          mkdir build dist
 
       - name: Install electron-builder
-        run: npm install -g electron-builder@26.0.12
-        env:
-          NODE_OPTIONS: "--max-old-space-size=4096"
+        run: cd windows-workspace && npm install -g electron-builder@26.0.12
+
+      - name: Create temporary package.json
+        run: |
+          cd windows-workspace
+          copy package.json package.json.bak
+          powershell -Command "(Get-Content package.json) -replace '\"build\": \".*\"', '\"build\": \"echo Skipping build as it was already done in build-common\"' | Set-Content package.json"
 
       - name: Build/Release Electron app
         uses: samuelmeuli/action-electron-builder@v1
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           release: ${{ startsWith(github.ref, 'refs/tags/v') }}
-          args: --win --publish always
+          args: --win --publish always --dir
+          working-directory: windows-workspace
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           NODE_ENV: production
           ELECTRON_BUILDER_ALLOW_UNRESOLVED_DEPENDENCIES: true
-          ELECTRON_VERSION: "28.1.0" 
+          ELECTRON_VERSION: "28.1.0"
+
+      - name: Restore package.json
+        if: always()
+        run: cd windows-workspace && move /Y package.json.bak package.json 
