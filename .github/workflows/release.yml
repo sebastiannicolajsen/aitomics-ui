@@ -124,19 +124,17 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: build-artifacts
-          path: macos-workspace
+          path: .
 
       - name: Setup workspace
         run: |
-          cd macos-workspace
           mkdir -p build dist
 
       - name: Install electron-builder
-        run: cd macos-workspace && npm install -g electron-builder@26.0.12
+        run: npm install -g electron-builder@26.0.12
 
       - name: Create temporary package.json
         run: |
-          cd macos-workspace
           cp package.json package.json.bak
           jq '.scripts.build = "echo Skipping build as it was already done in build-common"' package.json > package.json.tmp
           mv package.json.tmp package.json
@@ -147,7 +145,8 @@ jobs:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           release: ${{ startsWith(github.ref, 'refs/tags/v') }}
           args: --mac --publish always --dir
-          working-directory: macos-workspace
+          package_root: .
+          skip_build: true
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           NODE_ENV: production
@@ -156,7 +155,7 @@ jobs:
 
       - name: Restore package.json
         if: always()
-        run: cd macos-workspace && mv package.json.bak package.json
+        run: mv package.json.bak package.json
 
   package-windows:
     needs: build-common
@@ -167,19 +166,18 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: build-artifacts
-          path: windows-workspace
+          path: .
 
       - name: Setup workspace
         run: |
-          cd windows-workspace
-          mkdir build dist
+          New-Item -ItemType Directory -Force -Path build
+          New-Item -ItemType Directory -Force -Path dist
 
       - name: Install electron-builder
-        run: cd windows-workspace && npm install -g electron-builder@26.0.12
+        run: npm install -g electron-builder@26.0.12
 
       - name: Create temporary package.json
         run: |
-          cd windows-workspace
           copy package.json package.json.bak
           powershell -Command "(Get-Content package.json) -replace '\"build\": \".*\"', '\"build\": \"echo Skipping build as it was already done in build-common\"' | Set-Content package.json"
 
@@ -189,7 +187,8 @@ jobs:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           release: ${{ startsWith(github.ref, 'refs/tags/v') }}
           args: --win --publish always --dir
-          working-directory: windows-workspace
+          package_root: .
+          skip_build: true
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           NODE_ENV: production
@@ -198,4 +197,4 @@ jobs:
 
       - name: Restore package.json
         if: always()
-        run: cd windows-workspace && move /Y package.json.bak package.json 
+        run: move /Y package.json.bak package.json 
