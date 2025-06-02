@@ -17,6 +17,17 @@ jobs:
     runs-on: ${{ matrix.os }}
     # Add timeout-minutes at the job level
     timeout-minutes: 60
+    # Add runner timeout
+    env:
+      ACTIONS_RUNNER_DEBUG: true
+      ACTIONS_STEP_DEBUG: true
+      GITHUB_ACTIONS_RUNNER_EXTRA_USER_AGENT: "electron-builder-action"
+      # Increase npm timeout
+      NPM_CONFIG_FETCH_TIMEOUT: 300000
+      NPM_CONFIG_FETCH_RETRIES: 5
+      NPM_CONFIG_FETCH_RETRY_FACTOR: 2
+      NPM_CONFIG_FETCH_RETRY_MINTIMEOUT: 10000
+      NPM_CONFIG_FETCH_RETRY_MAXTIMEOUT: 60000
 
     strategy:
       matrix:
@@ -34,6 +45,62 @@ jobs:
           node-version: '20'
           # Remove the built-in npm cache as we're using our own
           cache: ''
+
+      - name: Debug environment
+        run: |
+          echo "Runner environment:"
+          echo "Runner OS: $RUNNER_OS"
+          echo "Runner temp: $RUNNER_TEMP"
+          echo "Runner tool cache: $RUNNER_TOOL_CACHE"
+          echo "GitHub workspace: $GITHUB_WORKSPACE"
+          echo "GitHub action path: $GITHUB_ACTION_PATH"
+          echo "GitHub event name: $GITHUB_EVENT_NAME"
+          echo "GitHub event path: $GITHUB_EVENT_PATH"
+          echo "GitHub workflow: $GITHUB_WORKFLOW"
+          echo "GitHub job: $GITHUB_JOB"
+          echo "GitHub run id: $GITHUB_RUN_ID"
+          echo "GitHub run number: $GITHUB_RUN_NUMBER"
+          echo "GitHub run attempt: $GITHUB_RUN_ATTEMPT"
+          echo "GitHub actor: $GITHUB_ACTOR"
+          echo "GitHub repository: $GITHUB_REPOSITORY"
+          echo "GitHub ref: $GITHUB_REF"
+          echo "GitHub ref name: $GITHUB_REF_NAME"
+          echo "GitHub ref type: $GITHUB_REF_TYPE"
+          echo "GitHub head ref: $GITHUB_HEAD_REF"
+          echo "GitHub base ref: $GITHUB_BASE_REF"
+          echo "GitHub server url: $GITHUB_SERVER_URL"
+          echo "GitHub api url: $GITHUB_API_URL"
+          echo "GitHub graphql url: $GITHUB_GRAPHQL_URL"
+          echo "GitHub workspace: $GITHUB_WORKSPACE"
+          echo "GitHub action: $GITHUB_ACTION"
+          echo "GitHub action path: $GITHUB_ACTION_PATH"
+          echo "GitHub action repository: $GITHUB_ACTION_REPOSITORY"
+          echo "GitHub action ref: $GITHUB_ACTION_REF"
+          echo "GitHub event path: $GITHUB_EVENT_PATH"
+          echo "GitHub step summary: $GITHUB_STEP_SUMMARY"
+          echo "GitHub state: $GITHUB_STATE"
+          echo "GitHub output: $GITHUB_OUTPUT"
+          echo "GitHub environment file: $GITHUB_ENV"
+          echo "GitHub path: $GITHUB_PATH"
+          echo "GitHub token: $GITHUB_TOKEN"
+          echo "GitHub server url: $GITHUB_SERVER_URL"
+          echo "GitHub api url: $GITHUB_API_URL"
+          echo "GitHub graphql url: $GITHUB_GRAPHQL_URL"
+          echo "GitHub workspace: $GITHUB_WORKSPACE"
+          echo "GitHub action: $GITHUB_ACTION"
+          echo "GitHub action path: $GITHUB_ACTION_PATH"
+          echo "GitHub action repository: $GITHUB_ACTION_REPOSITORY"
+          echo "GitHub action ref: $GITHUB_ACTION_REF"
+          echo "GitHub event path: $GITHUB_EVENT_PATH"
+          echo "GitHub step summary: $GITHUB_STEP_SUMMARY"
+          echo "GitHub state: $GITHUB_STATE"
+          echo "GitHub output: $GITHUB_OUTPUT"
+          echo "GitHub environment file: $GITHUB_ENV"
+          echo "GitHub path: $GITHUB_PATH"
+          echo "GitHub token: $GITHUB_TOKEN"
+          echo "Runner environment:"
+          env | sort
+        timeout-minutes: 2
 
       - name: Debug cache paths
         run: |
@@ -84,13 +151,21 @@ jobs:
           (
             while true; do
               echo "Installation in progress... $(date)"
+              echo "Current directory: $(pwd)"
+              echo "Disk space:"
+              df -h
+              echo "Memory usage:"
+              free -h || true
+              ps aux | grep npm || true
               sleep 10
             done
           ) & PROGRESS_PID=$!
           
           # Function to clean up the progress process
           cleanup() {
+            echo "Cleaning up..."
             kill $PROGRESS_PID 2>/dev/null || true
+            echo "Cleanup complete"
           }
           trap cleanup EXIT
           
@@ -105,14 +180,14 @@ jobs:
           
           # Use npm install to update dependencies
           echo "Step 2/4: Installing dependencies..."
-          npm install --no-audit --no-fund --no-package-lock --progress=false || {
+          npm install --no-audit --no-fund --no-package-lock --progress=false --loglevel=verbose || {
             echo "Root dependencies installation failed!"
             exit 1
           }
           
           # Generate fresh package-lock.json
           echo "Step 3/4: Generating package-lock.json..."
-          npm install --package-lock-only --progress=false || {
+          npm install --package-lock-only --progress=false --loglevel=verbose || {
             echo "Failed to generate package-lock.json!"
             exit 1
           }
