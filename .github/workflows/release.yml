@@ -27,7 +27,7 @@ jobs:
 
     steps:
       - name: Check out Git repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         timeout-minutes: 5
 
       - name: Setup Node.js
@@ -38,7 +38,7 @@ jobs:
         timeout-minutes: 5
 
       - name: Cache npm
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           path: ~/.npm
           key: ${{ runner.os }}-npm-cache-${{ hashFiles('**/package-lock.json') }}
@@ -46,7 +46,7 @@ jobs:
             ${{ runner.os }}-npm-cache-
 
       - name: Cache root node_modules
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           path: node_modules
           key: ${{ runner.os }}-root-modules-${{ hashFiles('package-lock.json') }}
@@ -54,7 +54,7 @@ jobs:
             ${{ runner.os }}-root-modules-
 
       - name: Cache renderer node_modules
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           path: src/renderer/node_modules
           key: ${{ runner.os }}-renderer-modules-${{ hashFiles('src/renderer/package-lock.json') }}
@@ -104,7 +104,7 @@ jobs:
         run: npm run build-preload
 
       - name: Upload build artifacts
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: build-artifacts
           path: |
@@ -121,7 +121,7 @@ jobs:
     timeout-minutes: 30
     steps:
       - name: Download build artifacts
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: build-artifacts
           path: macos-workspace
@@ -164,7 +164,7 @@ jobs:
     timeout-minutes: 30
     steps:
       - name: Download build artifacts
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: build-artifacts
           path: windows-workspace
