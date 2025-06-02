@@ -1,6 +1,6 @@
 {
   "name": "aitomics-ui",
-  "version": "1.0.0-beta.72",
+  "version": "1.0.0-beta.73",
   "description": "A local application for managing Aitomics projects with a block-based code editor",
   "main": "main.js",
   "scripts": {
@@ -72,7 +72,7 @@
       "src/renderer/build/**/*",
       "!dist/**/*",
       "package.json",
-      "src/renderer/src/preload.js",
+      "!src/renderer/src/preload.js",
       "build/icon.png",
       "build/icon.ico",
       "build/flow-dependencies/**/*",
