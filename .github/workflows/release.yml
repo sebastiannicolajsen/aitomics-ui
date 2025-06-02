@@ -32,15 +32,30 @@ jobs:
             **/package-lock.json
             **/package.json
 
+      - name: Cache node_modules
+        uses: actions/cache@v3
+        with:
+          path: |
+            **/node_modules
+            node_modules
+          key: ${{ runner.os }}-modules-${{ hashFiles('**/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-modules-
+
       - name: Install dependencies
         run: |
-          npm install
+          echo "Installing root dependencies..."
+          npm install --prefer-offline --no-audit
+          echo "Installing renderer dependencies..."
           cd src/renderer
           rm -rf node_modules package-lock.json
-          npm install
+          npm install --prefer-offline --no-audit
           cd ../..
-          npm install electron-builder@26.0.12 --save-dev
-          npm install
+          echo "Installing electron-builder..."
+          npm install electron-builder@26.0.12 --save-dev --prefer-offline --no-audit
+          echo "Final dependency sync..."
+          npm install --prefer-offline --no-audit
+        timeout-minutes: 10
 
       - name: Build renderer
         run: |
@@ -48,12 +63,21 @@ jobs:
           export NODE_OPTIONS="--max-old-space-size=4096"
           export CI=false
           echo "Starting renderer build..."
+          echo "Step 1/4: Cleaning build directory..."
+          rm -rf build
+          echo "Step 2/4: Starting build process..."
           npm run build
-          echo "Renderer build completed"
+          echo "Step 3/4: Verifying build output..."
+          if [ ! -d "build" ]; then
+            echo "Build directory not found!"
+            exit 1
+          fi
+          echo "Step 4/4: Build completed successfully"
           cd ../..
-        timeout-minutes: 15
+        timeout-minutes: 30
         env:
           NODE_ENV: production
+          GITHUB_ACTIONS: true
 
       - name: Build preload script
         run: |
