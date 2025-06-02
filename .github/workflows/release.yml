@@ -152,8 +152,21 @@ jobs:
 
       - name: Install renderer dependencies
         run: |
+          echo "Starting renderer dependencies installation..."
+          echo "Current directory: $(pwd)"
+          echo "Listing src/renderer contents:"
+          ls -la src/renderer
+          
           cd src/renderer
-          npm install --no-audit --no-fund
+          echo "Changed to renderer directory: $(pwd)"
+          echo "Listing package files:"
+          ls -la package*.json
+          
+          echo "Installing dependencies..."
+          npm install --no-audit --no-fund --verbose
+          
+          echo "Installation complete. Listing node_modules:"
+          ls -la node_modules | head -n 5
           cd ../..
         env:
           NODE_OPTIONS: "--max-old-space-size=4096"
