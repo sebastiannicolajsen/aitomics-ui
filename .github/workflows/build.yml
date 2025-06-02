@@ -35,38 +35,33 @@ jobs:
           npm install
           cd src/renderer && npm install && cd ../..
 
-      - name: Prepare build environment
+      # macOS specific steps
+      - name: Prepare macOS build environment
         if: matrix.os == 'macos-latest'
         run: |
-          # Ensure build directory exists and is clean
+          # Only clean dist directory, preserve build directory
           rm -rf dist/
-          mkdir -p build/
-          # Ensure icon file is properly copied
-          cp build/icon.icns build/icon.icns.new || true
-          rm -f build/icon.icns
-          mv build/icon.icns.new build/icon.icns || true
-          # Set proper permissions
-          chmod 644 build/icon.icns || true
+          # Handle icon file if it exists
+          if [ -f build/icon.icns ]; then
+            chmod 644 build/icon.icns
+          fi
 
-      - name: Prepare build environment
+      - name: Build macOS app
+        if: matrix.os == 'macos-latest'
+        run: |
+          cd src/renderer && npm run build && cd ../..
+          npm run build-preload
+          npm run prepare-flow-deps
+          npm run dist
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          ELECTRON_BUILDER_ALLOW_UNRESOLVED_DEPENDENCIES: true
+          ELECTRON_VERSION: "28.1.0"
+
+      # Windows specific steps (using the working version)
+      - name: Package Windows app
         if: matrix.os == 'windows-latest'
-        run: |
-          # Ensure build directory exists and is clean
-          if (Test-Path dist) { Remove-Item -Recurse -Force dist }
-          if (-not (Test-Path build)) { New-Item -ItemType Directory -Force -Path build }
-          # Ensure icon file is properly copied
-          if (Test-Path build/icon.icns) {
-            Copy-Item build/icon.icns build/icon.icns.new -Force
-            Remove-Item build/icon.icns -Force
-            Move-Item build/icon.icns.new build/icon.icns -Force
-          }
-
-      - name: Package app
-        run: |
-          # First run to generate effective config
-          npm run dist -- --dir
-          # Then run the actual build
-          npm run package-app
+        run: npm run package-app
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           ELECTRON_BUILDER_ALLOW_UNRESOLVED_DEPENDENCIES: true
