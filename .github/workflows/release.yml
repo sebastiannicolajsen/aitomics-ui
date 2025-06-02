@@ -209,6 +209,16 @@ jobs:
       - name: Build preload script
         run: npm run build-preload
 
+      - name: Clean dist directory
+        run: |
+          echo "Cleaning dist directory..."
+          if [ "$RUNNER_OS" == "Windows" ]; then
+            if (Test-Path dist) { Remove-Item -Recurse -Force dist }
+          else
+            rm -rf dist
+          fi
+        shell: pwsh  # Use PowerShell for both Windows and Unix-like systems
+
       - name: Install electron-builder
         run: npm install -g electron-builder@26.0.12
         env:
@@ -424,6 +434,16 @@ jobs:
 
       - name: Build preload script
         run: npm run build-preload
+
+      - name: Clean dist directory
+        run: |
+          echo "Cleaning dist directory..."
+          if ($env:RUNNER_OS -eq "Windows") {
+            if (Test-Path dist) { Remove-Item -Recurse -Force dist }
+          } else {
+            rm -rf dist
+          fi
+        shell: pwsh  # Use PowerShell for both Windows and Unix-like systems
 
       - name: Install electron-builder
         run: npm install -g electron-builder@26.0.12
