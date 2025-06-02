@@ -34,7 +34,10 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '20'
-          cache: ''
+          cache: 'npm'
+          cache-dependency-path: |
+            package-lock.json
+            src/renderer/package-lock.json
         timeout-minutes: 5
 
       - name: Generate cache key
@@ -45,15 +48,8 @@ jobs:
           echo "root_pkg_hash=$ROOT_PKG_HASH" >> $GITHUB_OUTPUT
           echo "renderer_pkg_hash=$RENDERER_PKG_HASH" >> $GITHUB_OUTPUT
 
-      - name: Cache npm
-        uses: actions/cache@v4
-        with:
-          path: ~/.npm
-          key: npm-cache-${{ steps.cache-key.outputs.root_pkg_hash }}-${{ steps.cache-key.outputs.renderer_pkg_hash }}
-          restore-keys: |
-            npm-cache-
-
       - name: Cache root node_modules
+        id: root-cache
         uses: actions/cache@v4
         with:
           path: node_modules
@@ -62,6 +58,7 @@ jobs:
             root-modules-
 
       - name: Cache renderer node_modules
+        id: renderer-cache
         uses: actions/cache@v4
         with:
           path: src/renderer/node_modules
@@ -73,7 +70,7 @@ jobs:
         if: steps.root-cache.outputs.cache-hit != 'true'
         run: |
           echo "Installing root dependencies..."
-          npm install --no-audit --no-fund
+          npm ci --no-audit --no-fund
         env:
           NODE_OPTIONS: "--max-old-space-size=4096"
 
@@ -81,12 +78,13 @@ jobs:
         if: steps.renderer-cache.outputs.cache-hit != 'true'
         run: |
           cd src/renderer
-          npm install --no-audit --no-fund --no-progress
+          npm ci --no-audit --no-fund --no-progress
           cd ../..
         env:
           NODE_OPTIONS: "--max-old-space-size=4096"
 
       - name: Install electron
+        if: steps.root-cache.outputs.cache-hit != 'true'
         run: |
           echo "Installing electron..."
           npm install electron@28.1.0 --save-exact
@@ -94,11 +92,13 @@ jobs:
           NODE_OPTIONS: "--max-old-space-size=4096"
 
       - name: Prepare flow dependencies
+        if: steps.root-cache.outputs.cache-hit != 'true'
         run: npm run prepare-flow-deps
         env:
           NODE_OPTIONS: "--max-old-space-size=4096"
 
       - name: Build renderer
+        if: steps.renderer-cache.outputs.cache-hit != 'true'
         run: |
           cd src/renderer
           npm run build
@@ -109,6 +109,7 @@ jobs:
           GENERATE_SOURCEMAP: false
 
       - name: Build preload script
+        if: steps.root-cache.outputs.cache-hit != 'true'
         run: npm run build-preload
 
       - name: Upload build artifacts
@@ -181,6 +182,7 @@ jobs:
 
       - name: Setup workspace
         run: |
+          rm -rf build dist-mac
           mkdir -p build dist-mac
 
       - name: Create temporary package.json
@@ -208,7 +210,10 @@ jobs:
 
       - name: Restore package.json
         if: always()
-        run: mv package.json.bak package.json
+        run: |
+          if [ -f package.json.bak ]; then
+            mv package.json.bak package.json
+          fi
 
   package-windows:
     needs: build-common
@@ -261,14 +266,17 @@ jobs:
 
       - name: Setup workspace
         run: |
+          Remove-Item -Path build,dist-win -Recurse -Force -ErrorAction SilentlyContinue
           New-Item -ItemType Directory -Force -Path build
           New-Item -ItemType Directory -Force -Path dist-win
 
       - name: Create temporary package.json
         run: |
-          copy package.json package.json.bak
-          powershell -Command "(Get-Content package.json) -replace '\"directories\":\s*{[^}]*}', '\"directories\": { \"output\": \"dist-win\" }' | Set-Content package.json"
-          powershell -Command "(Get-Content package.json) -replace '\"build\": \".*\"', '\"build\": \"echo Skipping build as it was already done in build-common\"' | Set-Content package.json"
+          Copy-Item -Path package.json -Destination package.json.bak
+          $packageJson = Get-Content package.json | ConvertFrom-Json
+          $packageJson.build.directories.output = "dist-win"
+          $packageJson.scripts.build = "echo Skipping build as it was already done in build-common"
+          $packageJson | ConvertTo-Json -Depth 32 | Set-Content package.json
 
       - name: Install electron-builder
         run: npm install -g electron-builder@26.0.12
@@ -289,4 +297,7 @@ jobs:
 
       - name: Restore package.json
         if: always()
-        run: move /Y package.json.bak package.json 
+        run: |
+          if (Test-Path package.json.bak) {
+            Move-Item -Path package.json.bak -Destination package.json -Force
+          } 
