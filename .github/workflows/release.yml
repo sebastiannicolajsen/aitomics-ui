@@ -111,31 +111,36 @@ jobs:
           export NODE_ENV=production
           export GITHUB_ACTIONS=true
           export TSC_COMPILE_ON_ERROR=true
+          
           echo "Starting renderer build..."
           echo "Step 1/4: Cleaning build directory..."
           rm -rf build
+          
           echo "Step 2/4: Starting build process..."
-          # Run build with timeout and keep-alive
-          timeout 1800 bash -c '
+          # Start a background process to show progress
+          (
             while true; do
               echo "Build in progress... $(date)"
               sleep 30
             done
-          ' & KEEP_ALIVE_PID=$!
+          ) & PROGRESS_PID=$!
           
-          npm run build || {
-            kill $KEEP_ALIVE_PID
+          # Run the build
+          if ! npm run build; then
+            kill $PROGRESS_PID 2>/dev/null || true
             echo "Build failed!"
             exit 1
-          }
+          fi
           
-          kill $KEEP_ALIVE_PID
+          # Kill the progress process
+          kill $PROGRESS_PID 2>/dev/null || true
           
           echo "Step 3/4: Verifying build output..."
           if [ ! -d "build" ]; then
             echo "Build directory not found!"
             exit 1
           fi
+          
           echo "Step 4/4: Build completed successfully"
           cd ../..
         timeout-minutes: 30
