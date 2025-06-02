@@ -47,8 +47,9 @@ jobs:
           cd src/renderer
           export NODE_OPTIONS="--max-old-space-size=4096"
           export CI=false
-          export DEBUG=*
-          npm run build --verbose
+          echo "Starting renderer build..."
+          npm run build
+          echo "Renderer build completed"
           cd ../..
         timeout-minutes: 15
         env:
