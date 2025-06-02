@@ -80,38 +80,52 @@ jobs:
 
       - name: Install root dependencies
         run: |
+          # Start a background process to show progress
+          (
+            while true; do
+              echo "Installation in progress... $(date)"
+              sleep 10
+            done
+          ) & PROGRESS_PID=$!
+          
+          # Function to clean up the progress process
+          cleanup() {
+            kill $PROGRESS_PID 2>/dev/null || true
+          }
+          trap cleanup EXIT
+          
           echo "Installing root dependencies..."
           echo "Cache hit status: ${{ steps.root-cache.outputs.cache-hit }}"
           echo "Cache primary key: ${{ steps.root-cache.outputs.cache-primary-key }}"
-          echo "Cache matched key: ${{ steps.root-cache.outputs.cache-matched-key }}"
+          echo "Cache matched key: ${{ steps.renderer-cache.outputs.cache-matched-key }}"
           
           # Clean install to ensure fresh state
-          echo "Cleaning node_modules..."
+          echo "Step 1/4: Cleaning node_modules..."
           rm -rf node_modules package-lock.json
           
           # Use npm install to update dependencies
-          echo "Installing dependencies..."
-          npm install --no-audit --no-fund --no-package-lock || {
+          echo "Step 2/4: Installing dependencies..."
+          npm install --no-audit --no-fund --no-package-lock --progress=false || {
             echo "Root dependencies installation failed!"
             exit 1
           }
           
           # Generate fresh package-lock.json
-          echo "Generating package-lock.json..."
-          npm install --package-lock-only || {
+          echo "Step 3/4: Generating package-lock.json..."
+          npm install --package-lock-only --progress=false || {
             echo "Failed to generate package-lock.json!"
             exit 1
           }
           
           # Verify the installation
-          echo "Verifying installation..."
+          echo "Step 4/4: Verifying installation..."
           if [ ! -d "node_modules" ]; then
             echo "node_modules directory not found after installation!"
             exit 1
           fi
           
           # List installed modules for debugging
-          echo "Installed modules:"
+          echo "Installation complete. Installed modules:"
           ls -la node_modules | head -n 5
         timeout-minutes: 15
         env:
@@ -119,6 +133,20 @@ jobs:
 
       - name: Install renderer dependencies
         run: |
+          # Start a background process to show progress
+          (
+            while true; do
+              echo "Installation in progress... $(date)"
+              sleep 10
+            done
+          ) & PROGRESS_PID=$!
+          
+          # Function to clean up the progress process
+          cleanup() {
+            kill $PROGRESS_PID 2>/dev/null || true
+          }
+          trap cleanup EXIT
+          
           cd src/renderer
           echo "Installing renderer dependencies..."
           echo "Cache hit status: ${{ steps.renderer-cache.outputs.cache-hit }}"
@@ -126,32 +154,32 @@ jobs:
           echo "Cache matched key: ${{ steps.renderer-cache.outputs.cache-matched-key }}"
           
           # Clean install to ensure fresh state
-          echo "Cleaning node_modules..."
+          echo "Step 1/4: Cleaning node_modules..."
           rm -rf node_modules package-lock.json
           
           # Use npm install to update dependencies
-          echo "Installing dependencies..."
-          npm install --no-audit --no-fund --no-package-lock || {
+          echo "Step 2/4: Installing dependencies..."
+          npm install --no-audit --no-fund --no-package-lock --progress=false || {
             echo "Renderer dependencies installation failed!"
             exit 1
           }
           
           # Generate fresh package-lock.json
-          echo "Generating package-lock.json..."
-          npm install --package-lock-only || {
+          echo "Step 3/4: Generating package-lock.json..."
+          npm install --package-lock-only --progress=false || {
             echo "Failed to generate package-lock.json!"
             exit 1
           }
           
           # Verify the installation
-          echo "Verifying installation..."
+          echo "Step 4/4: Verifying installation..."
           if [ ! -d "node_modules" ]; then
             echo "node_modules directory not found after installation!"
             exit 1
           fi
           
           # List installed modules for debugging
-          echo "Installed modules:"
+          echo "Installation complete. Installed modules:"
           ls -la node_modules | head -n 5
           cd ../..
         timeout-minutes: 15
