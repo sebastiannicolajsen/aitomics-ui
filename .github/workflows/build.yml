@@ -155,30 +155,16 @@ jobs:
         uses: softprops/action-gh-release@v1
         with:
           name: Release ${{ github.ref_name }}
-          body: |
-            ${{ needs.build.outputs.release_notes }}
-            
-            ## 📦 Executables
-            - macOS: Download the `.dmg` file for easy installation
-            - Windows: Download the `.exe` installer for Windows systems
-            
-            ## 📋 Assets
-            - Checksums and update metadata files
+          body: ${{ needs.build.outputs.release_notes }}
           files: |
+            # Executables
             artifacts/macos/*.dmg
+            artifacts/windows/*.exe
+            # Assets
             artifacts/macos/*.zip
             artifacts/macos/macos-checksums.txt
             artifacts/macos/latest-mac.yml
-            artifacts/windows/*.exe
             artifacts/windows/windows-checksums.txt
             artifacts/windows/latest.yml
-          asset_labels: |
-            artifacts/macos/*.dmg:Executables
-            artifacts/macos/*.zip:Executables
-            artifacts/windows/*.exe:Executables
-            artifacts/macos/macos-checksums.txt:Assets
-            artifacts/macos/latest-mac.yml:Assets
-            artifacts/windows/windows-checksums.txt:Assets
-            artifacts/windows/latest.yml:Assets
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} 
