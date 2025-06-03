@@ -157,14 +157,20 @@ jobs:
           name: Release ${{ github.ref_name }}
           body: ${{ needs.build.outputs.release_notes }}
           files: |
-            # Executables
             artifacts/macos/*.dmg
             artifacts/windows/*.exe
-            # Assets
             artifacts/macos/*.zip
             artifacts/macos/macos-checksums.txt
             artifacts/macos/latest-mac.yml
             artifacts/windows/windows-checksums.txt
             artifacts/windows/latest.yml
+          asset_name: |
+            Executables/${{ github.ref_name }}/macos-dmg
+            Executables/${{ github.ref_name }}/windows-exe
+            Assets/${{ github.ref_name }}/macos-zip
+            Assets/${{ github.ref_name }}/macos-checksums
+            Assets/${{ github.ref_name }}/macos-latest-yml
+            Assets/${{ github.ref_name }}/windows-checksums
+            Assets/${{ github.ref_name }}/windows-latest-yml
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} 
