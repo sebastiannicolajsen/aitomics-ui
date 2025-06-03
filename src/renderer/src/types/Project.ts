@@ -46,6 +46,7 @@ export interface Project {
   id: string;
   name: string;
   description: string;
+  content?: string;  // Optional content field
   blocks: Block[];
   edges: Edge[];
   createdAt: string;

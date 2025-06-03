@@ -116,6 +116,41 @@ jobs:
           pattern: "*-artifacts"
           merge-multiple: true
 
+      - name: Generate Update Channel Files
+        run: |
+          # Get version from tag
+          VERSION=${GITHUB_REF#refs/tags/v}
+          
+          # Generate latest-mac.yml
+          cat > artifacts/macos/latest-mac.yml << EOF
+          version: ${VERSION}
+          files:
+            - url: Aitomics.UI-${VERSION}-arm64-mac.zip
+              sha512: $(shasum -a 512 artifacts/macos/Aitomics.UI-${VERSION}-arm64-mac.zip | cut -d' ' -f1)
+              size: $(stat -f%z artifacts/macos/Aitomics.UI-${VERSION}-arm64-mac.zip)
+            - url: Aitomics.UI-${VERSION}-arm64.dmg
+              sha512: $(shasum -a 512 artifacts/macos/Aitomics.UI-${VERSION}-arm64.dmg | cut -d' ' -f1)
+              size: $(stat -f%z artifacts/macos/Aitomics.UI-${VERSION}-arm64.dmg)
+          path: Aitomics.UI-${VERSION}-arm64.dmg
+          sha512: $(shasum -a 512 artifacts/macos/Aitomics.UI-${VERSION}-arm64.dmg | cut -d' ' -f1)
+          releaseDate: '$(date -u +"%Y-%m-%dT%H:%M:%S.000Z")'
+          EOF
+          
+          # Generate latest.yml for Windows
+          cat > artifacts/windows/latest.yml << EOF
+          version: ${VERSION}
+          files:
+            - url: Aitomics.UI.Setup.${VERSION}.exe
+              sha512: $(shasum -a 512 artifacts/windows/Aitomics.UI.Setup.${VERSION}.exe | cut -d' ' -f1)
+              size: $(stat -f%z artifacts/windows/Aitomics.UI.Setup.${VERSION}.exe)
+            - url: Aitomics.UI.${VERSION}.exe
+              sha512: $(shasum -a 512 artifacts/windows/Aitomics.UI.${VERSION}.exe | cut -d' ' -f1)
+              size: $(stat -f%z artifacts/windows/Aitomics.UI.${VERSION}.exe)
+          path: Aitomics.UI.Setup.${VERSION}.exe
+          sha512: $(shasum -a 512 artifacts/windows/Aitomics.UI.Setup.${VERSION}.exe | cut -d' ' -f1)
+          releaseDate: '$(date -u +"%Y-%m-%dT%H:%M:%S.000Z")'
+          EOF
+
       - name: Create Release
         uses: softprops/action-gh-release@v1
         with:
@@ -125,7 +160,9 @@ jobs:
             artifacts/macos/*.dmg
             artifacts/macos/*.zip
             artifacts/macos/macos-checksums.txt
+            artifacts/macos/latest-mac.yml
             artifacts/windows/*.exe
             artifacts/windows/windows-checksums.txt
+            artifacts/windows/latest.yml
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} 

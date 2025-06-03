@@ -19,7 +19,33 @@ import ReactFlow, {
   getBezierPath,
 } from 'reactflow';
 import 'reactflow/dist/style.css';
-import { Box, Typography, Button, Stack, Drawer, TextField, IconButton, FormControl, InputLabel, Select, MenuItem, Chip, List, ListItem, ListItemText, Dialog, DialogTitle, DialogContent, Tooltip, Paper, Slider } from '@mui/material';
+import {
+  Box,
+  Typography,
+  Button,
+  Stack,
+  Drawer,
+  TextField,
+  IconButton,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem,
+  Chip,
+  List,
+  ListItem,
+  ListItemText,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  Tooltip,
+  Paper,
+  Slider,
+  CircularProgress,
+  Divider,
+  LinearProgress,
+} from '@mui/material';
 import { Project, Block, BlockType, Action, ActionConfig } from '../types/Project';
 import { builtInActions } from '../actions/builtInActions';
 import DownloadIcon from '@mui/icons-material/Download';
@@ -50,6 +76,11 @@ import debounce from 'lodash/debounce';
 import ActionSelector from './ActionSelector';
 import SmartToyIcon from '@mui/icons-material/SmartToy';
 import CheckIcon from '@mui/icons-material/Check';
+import EditIcon from '@mui/icons-material/Edit';
+import MarkdownEditor from './MarkdownEditor';
+import UndoIcon from '@mui/icons-material/Undo';
+import RedoIcon from '@mui/icons-material/Redo';
+import { Node as ReactFlowNode } from 'reactflow';
 
 interface NodeData {
   type: 'import' | 'export' | 'transform' | 'comparison';
@@ -435,6 +466,464 @@ const ModelSelectionDialog: React.FC<ModelSelectionDialogProps> = ({
           ))}
         </List>
       </DialogContent>
+    </Dialog>
+  );
+};
+
+// Add ProjectEditDialog component
+interface ProjectEditDialogProps {
+  open: boolean;
+  onClose: () => void;
+  project: Project;
+  onSave: (project: Project) => void;
+}
+
+// Add this helper function at the top of the file, after the imports and before any component definitions
+const applyMarkdownStyles = (text: string) => {
+  // Split the text into lines to handle headers
+  const lines = text.split('\n');
+  const styledLines = lines.map(line => {
+    // Handle headers - style both the # symbols and the text
+    if (line.startsWith('# ')) {
+      return `<span style="color: #673ab7; font-weight: bold; font-size: 1.4em;"># ${line.slice(2)}</span>`;
+    }
+    if (line.startsWith('## ')) {
+      return `<span style="color: #673ab7; font-weight: bold; font-size: 1.3em;">## ${line.slice(3)}</span>`;
+    }
+    if (line.startsWith('### ')) {
+      return `<span style="color: #673ab7; font-weight: bold; font-size: 1.2em;">### ${line.slice(4)}</span>`;
+    }
+    if (line.startsWith('#### ')) {
+      return `<span style="color: #673ab7; font-weight: bold; font-size: 1.1em;">#### ${line.slice(5)}</span>`;
+    }
+    if (line.startsWith('##### ')) {
+      return `<span style="color: #673ab7; font-weight: bold; font-size: 1em;">##### ${line.slice(6)}</span>`;
+    }
+    if (line.startsWith('###### ')) {
+      return `<span style="color: #673ab7; font-weight: bold; font-size: 1em;">###### ${line.slice(7)}</span>`;
+    }
+
+    // Handle inline styles - style both the syntax and the text
+    let styledLine = line;
+    
+    // Handle bold (**text**)
+    styledLine = styledLine.replace(/\*\*(.*?)\*\*/g, '<span style="color: #673ab7; font-weight: bold;">**$1**</span>');
+    
+    // Handle italic (*text*)
+    styledLine = styledLine.replace(/\*(.*?)\*/g, '<span style="font-style: italic;">*$1*</span>');
+    
+    // Handle code (`text`)
+    styledLine = styledLine.replace(/`(.*?)`/g, '<span style="background-color: rgba(0, 0, 0, 0.04); padding: 0.2em 0.4em; border-radius: 3px; font-family: monospace; font-size: 0.9em;">`$1`</span>');
+
+    return styledLine;
+  });
+
+  return styledLines.join('\n');
+};
+
+const ProjectEditDialog: React.FC<ProjectEditDialogProps> = ({
+  open,
+  onClose,
+  project,
+  onSave,
+}) => {
+  const [name, setName] = useState(project.name);
+  const [description, setDescription] = useState(project.description || '');
+  const editorRef = useRef<HTMLDivElement>(null);
+  const lastCursorPosition = useRef<number>(0);
+  const historyRef = useRef<string[]>([]);
+  const historyIndexRef = useRef<number>(-1);
+  const isUpdatingRef = useRef<boolean>(false);
+
+  // Initialize history when dialog opens
+  useEffect(() => {
+    if (open) {
+      setDescription(project.description || '');
+      historyRef.current = [project.description || ''];
+      historyIndexRef.current = 0;
+      // Set initial content without triggering cursor reset
+      if (editorRef.current) {
+        isUpdatingRef.current = true;
+        editorRef.current.innerHTML = applyMarkdownStyles(project.description || '');
+        isUpdatingRef.current = false;
+      }
+    }
+  }, [open, project.description]);
+
+  const addToHistory = (newValue: string) => {
+    // Remove any future history if we're not at the end
+    if (historyIndexRef.current < historyRef.current.length - 1) {
+      historyRef.current = historyRef.current.slice(0, historyIndexRef.current + 1);
+    }
+    
+    // Don't add to history if it's the same as the last value
+    if (historyRef.current[historyRef.current.length - 1] === newValue) {
+      return;
+    }
+    
+    historyRef.current.push(newValue);
+    historyIndexRef.current = historyRef.current.length - 1;
+  };
+
+  const canUndo = () => historyIndexRef.current > 0;
+  const canRedo = () => historyIndexRef.current < historyRef.current.length - 1;
+
+  const handleUndo = () => {
+    if (canUndo()) {
+      historyIndexRef.current--;
+      const newValue = historyRef.current[historyIndexRef.current];
+      setDescription(newValue);
+      if (editorRef.current) {
+        editorRef.current.innerHTML = applyMarkdownStyles(newValue);
+      }
+    }
+  };
+
+  const handleRedo = () => {
+    if (canRedo()) {
+      historyIndexRef.current++;
+      const newValue = historyRef.current[historyIndexRef.current];
+      setDescription(newValue);
+      if (editorRef.current) {
+        editorRef.current.innerHTML = applyMarkdownStyles(newValue);
+      }
+    }
+  };
+
+  const saveCursorPosition = () => {
+    if (isUpdatingRef.current) return;
+    
+    const selection = window.getSelection();
+    if (selection && selection.rangeCount > 0 && editorRef.current) {
+      const range = selection.getRangeAt(0);
+      if (editorRef.current.contains(range.commonAncestorContainer)) {
+        const preCaretRange = range.cloneRange();
+        preCaretRange.selectNodeContents(editorRef.current);
+        preCaretRange.setEnd(range.endContainer, range.endOffset);
+        lastCursorPosition.current = preCaretRange.toString().length;
+      }
+    }
+  };
+
+  const restoreCursorPosition = () => {
+    if (isUpdatingRef.current) return;
+    
+    const selection = window.getSelection();
+    if (selection && editorRef.current) {
+      const range = document.createRange();
+      let charCount = 0;
+      let found = false;
+
+      const traverseNodes = (node: globalThis.Node) => {
+        if (found) return;
+        
+        if (node.nodeType === globalThis.Node.TEXT_NODE) {
+          const nodeText = node.textContent || '';
+          const nextCount = charCount + nodeText.length;
+          
+          if (nextCount >= lastCursorPosition.current) {
+            const offset = lastCursorPosition.current - charCount;
+            range.setStart(node, Math.min(offset, nodeText.length));
+            range.setEnd(node, Math.min(offset, nodeText.length));
+            found = true;
+          }
+          charCount = nextCount;
+        } else {
+          for (let i = 0; i < node.childNodes.length; i++) {
+            traverseNodes(node.childNodes[i]);
+          }
+        }
+      };
+
+      traverseNodes(editorRef.current);
+      selection.removeAllRanges();
+      selection.addRange(range);
+    }
+  };
+
+  const updateContent = (text: string) => {
+    if (isUpdatingRef.current) return;
+    
+    setDescription(text);
+    addToHistory(text);
+    
+    if (editorRef.current) {
+      isUpdatingRef.current = true;
+      const currentSelection = window.getSelection();
+      const currentRange = currentSelection?.getRangeAt(0);
+      
+      editorRef.current.innerHTML = applyMarkdownStyles(text);
+      
+      // Use requestAnimationFrame to ensure the DOM has updated
+      requestAnimationFrame(() => {
+        if (currentRange && editorRef.current?.contains(currentRange.commonAncestorContainer)) {
+          // If the cursor was in the editor, restore its position
+          restoreCursorPosition();
+        }
+        isUpdatingRef.current = false;
+      });
+    }
+  };
+
+  const handleInput = (e: React.FormEvent<HTMLDivElement>) => {
+    saveCursorPosition();
+    const text = e.currentTarget.textContent || '';
+    updateContent(text);
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
+    // Handle undo/redo
+    if (e.key === 'z' && (e.metaKey || e.ctrlKey)) {
+      e.preventDefault();
+      if (e.shiftKey) {
+        handleRedo();
+      } else {
+        handleUndo();
+      }
+      return;
+    }
+    // Handle redo with cmd/ctrl + y
+    if (e.key === 'y' && (e.metaKey || e.ctrlKey)) {
+      e.preventDefault();
+      handleRedo();
+      return;
+    }
+
+    // Handle tab key
+    if (e.key === 'Tab') {
+      e.preventDefault();
+      const selection = window.getSelection();
+      if (selection && selection.rangeCount > 0) {
+        const range = selection.getRangeAt(0);
+        const tabNode = document.createTextNode('  ');
+        range.deleteContents();
+        range.insertNode(tabNode);
+        range.setStartAfter(tabNode);
+        range.setEndAfter(tabNode);
+        selection.removeAllRanges();
+        selection.addRange(range);
+        saveCursorPosition();
+      }
+    }
+
+    // Handle enter key
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      document.execCommand('insertLineBreak');
+      saveCursorPosition();
+    }
+  };
+
+  const handleSave = () => {
+    onSave({
+      ...project,
+      name,
+      description,
+      updatedAt: new Date().toISOString(),
+    });
+    onClose();
+  };
+
+  return (
+    <Dialog
+      open={open}
+      onClose={onClose}
+      maxWidth="md"
+      fullWidth
+      PaperProps={{
+        sx: {
+          bgcolor: '#ffffff',
+          boxShadow: '0 4px 20px rgba(0, 0, 0, 0.1)',
+        },
+      }}
+    >
+      <DialogTitle sx={{ 
+        borderBottom: '1px solid #e0e0e0',
+        pb: 1.5,
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'center'
+      }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+          <Typography variant="h6" sx={{ 
+            fontFamily: 'monospace',
+            fontSize: '1.1rem',
+            color: '#333333'
+          }}>
+            Edit Project
+          </Typography>
+          <Box sx={{ display: 'flex', gap: 0.5 }}>
+            <Tooltip title="Undo (⌘Z)">
+              <IconButton
+                onClick={handleUndo}
+                disabled={!canUndo()}
+                size="small"
+                sx={{
+                  color: canUndo() ? '#666666' : '#cccccc',
+                  '&:hover': {
+                    color: canUndo() ? '#10a37f' : undefined,
+                    bgcolor: canUndo() ? 'rgba(16, 163, 127, 0.1)' : undefined,
+                  },
+                }}
+              >
+                <UndoIcon fontSize="small" />
+              </IconButton>
+            </Tooltip>
+            <Tooltip title="Redo (⌘⇧Z)">
+              <IconButton
+                onClick={handleRedo}
+                disabled={!canRedo()}
+                size="small"
+                sx={{
+                  color: canRedo() ? '#666666' : '#cccccc',
+                  '&:hover': {
+                    color: canRedo() ? '#10a37f' : undefined,
+                    bgcolor: canRedo() ? 'rgba(16, 163, 127, 0.1)' : undefined,
+                  },
+                }}
+              >
+                <RedoIcon fontSize="small" />
+              </IconButton>
+            </Tooltip>
+          </Box>
+        </Box>
+        <IconButton
+          onClick={onClose}
+          size="small"
+          sx={{
+            color: '#666666',
+            '&:hover': {
+              color: '#10a37f',
+              bgcolor: 'rgba(16, 163, 127, 0.1)',
+            },
+          }}
+        >
+          <CloseIcon />
+        </IconButton>
+      </DialogTitle>
+      <DialogContent sx={{ pt: 3 }}>
+        <Stack spacing={3}>
+          <Box>
+            <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 1 }}>
+              Project Name
+            </Typography>
+            <TextField
+              fullWidth
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              required
+              placeholder="Enter project name"
+              sx={{
+                '& .MuiOutlinedInput-root': {
+                  background: 'white',
+                  '& fieldset': {
+                    borderColor: 'rgba(0, 0, 0, 0.1)',
+                  },
+                  '&:hover fieldset': {
+                    borderColor: 'rgba(0, 0, 0, 0.2)',
+                  },
+                  '&.Mui-focused fieldset': {
+                    borderColor: '#666666',
+                  },
+                },
+              }}
+            />
+          </Box>
+          <Box>
+            <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 1 }}>
+              Description
+            </Typography>
+            <Box sx={{ 
+              border: '1px solid rgba(0, 0, 0, 0.1)',
+              borderRadius: 1,
+              overflow: 'hidden',
+              '&:hover': {
+                borderColor: 'rgba(0, 0, 0, 0.2)',
+              },
+              '&:focus-within': {
+                borderColor: '#666666',
+              },
+              height: '300px',
+              display: 'flex',
+              flexDirection: 'column',
+            }}>
+              <Box sx={{ 
+                flex: 1,
+                position: 'relative',
+                '& .markdown-editor': {
+                  width: '100%',
+                  height: '100%',
+                  fontFamily: 'monospace',
+                  fontSize: '14px',
+                  lineHeight: '1.5',
+                  padding: '16px',
+                  outline: 'none',
+                  border: 'none',
+                  resize: 'none',
+                  backgroundColor: 'transparent',
+                  color: '#24292e',
+                  tabSize: 2,
+                  '&::placeholder': {
+                    color: '#999'
+                  }
+                }
+              }}>
+                <div
+                  ref={editorRef}
+                  contentEditable
+                  suppressContentEditableWarning
+                  className="markdown-editor"
+                  onInput={handleInput}
+                  onKeyDown={handleKeyDown}
+                  style={{
+                    whiteSpace: 'pre-wrap',
+                    wordBreak: 'break-word'
+                  }}
+                  dangerouslySetInnerHTML={{ __html: applyMarkdownStyles(description) }}
+                />
+              </Box>
+            </Box>
+          </Box>
+        </Stack>
+      </DialogContent>
+      <DialogActions sx={{ 
+        borderTop: '1px solid rgba(0, 0, 0, 0.1)',
+        px: 3,
+        py: 2,
+      }}>
+        <Button 
+          onClick={onClose}
+          sx={{
+            color: '#666666',
+            '&:hover': {
+              backgroundColor: 'rgba(0, 0, 0, 0.04)',
+            },
+          }}
+        >
+          Cancel
+        </Button>
+        <Button
+          onClick={handleSave}
+          variant="contained"
+          disabled={!name}
+          sx={{
+            background: 'linear-gradient(145deg, #f7f7f8 0%, #f0f0f1 100%)',
+            boxShadow: '0 4px 12px rgba(0, 0, 0, 0.05)',
+            border: '1px solid rgba(0, 0, 0, 0.1)',
+            color: '#666666',
+            '&:hover': {
+              background: 'linear-gradient(145deg, #f0f0f1 0%, #e8e8e9 100%)',
+              boxShadow: '0 6px 16px rgba(0, 0, 0, 0.08)',
+            },
+            '&.Mui-disabled': {
+              background: 'linear-gradient(145deg, #f7f7f8 0%, #f0f0f1 100%)',
+              color: 'rgba(102, 102, 102, 0.5)',
+            },
+          }}
+        >
+          Save Changes
+        </Button>
+      </DialogActions>
     </Dialog>
   );
 };
@@ -2025,7 +2514,9 @@ const BlockEditor: React.FC<BlockEditorProps> = ({
     }
   }, [isRunDrawerOpen, fetchModels]);
 
-  // Update the drawer content
+  // Add state for project edit dialog
+  const [isProjectEditDialogOpen, setIsProjectEditDialogOpen] = useState(false);
+
   return (
     <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
       {showExecutionWindow ? (
@@ -2044,6 +2535,22 @@ const BlockEditor: React.FC<BlockEditorProps> = ({
           <Box sx={{ p: 2, borderBottom: 1, borderColor: 'divider', display: 'flex', alignItems: 'center', gap: 2 }}>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
               <Typography variant="h6">{project.name}</Typography>
+              <IconButton
+                onClick={() => setIsProjectEditDialogOpen(true)}
+                size="small"
+                sx={{
+                  color: '#666666',
+                  background: 'linear-gradient(145deg, #f5f5f5 0%, #e8e8e8 100%)',
+                  boxShadow: '0 4px 12px rgba(0, 0, 0, 0.05)',
+                  border: '1px solid rgba(0, 0, 0, 0.1)',
+                  '&:hover': {
+                    background: 'linear-gradient(145deg, #e8e8e8 0%, #dcdcdc 100%)',
+                    boxShadow: '0 6px 16px rgba(0, 0, 0, 0.08)',
+                  },
+                }}
+              >
+                <EditIcon fontSize="small" />
+              </IconButton>
               <IconButton
                 onClick={() => setIsRunDrawerOpen(true)}
                 size="small"
@@ -2148,6 +2655,17 @@ const BlockEditor: React.FC<BlockEditorProps> = ({
               </Button>
             </Stack>
           </Box>
+
+          <ProjectEditDialog
+            open={isProjectEditDialogOpen}
+            onClose={() => setIsProjectEditDialogOpen(false)}
+            project={project}
+            onSave={(updatedProject) => {
+              onUpdateProject(updatedProject);
+              setIsProjectEditDialogOpen(false);
+            }}
+          />
+
           <ReactFlowProvider>
             <FlowWrapper
               project={project}
@@ -2166,6 +2684,7 @@ const BlockEditor: React.FC<BlockEditorProps> = ({
               onPaneClick={handleBackgroundClick}
             />
           </ReactFlowProvider>
+
           <Drawer
             anchor="right"
             open={isDrawerOpen}
@@ -2261,8 +2780,10 @@ const BlockEditor: React.FC<BlockEditorProps> = ({
                               : selectedNode?.type === 'export' 
                               ? 'linear-gradient(145deg, #dc354520 0%, #dc354510 100%)'
                               : selectedNode?.type === 'comparison' 
-                              ? 'linear-gradient(145deg, #673ab720 0%, #673ab710 100%)'
-                              : 'linear-gradient(145deg, #ffc10720 0%, #ffc10710 100%)',
+                                ? 'linear-gradient(145deg, #673ab720 0%, #673ab710 100%)'
+                                : selectedNode?.type === 'transform'
+                                  ? 'linear-gradient(145deg, #ffc10720 0%, #ffc10710 100%)'
+                                  : 'linear-gradient(145deg, #66666620 0%, #66666610 100%)',
                             color: selectedNode?.type === 'import' 
                               ? '#10a37f'
                               : selectedNode?.type === 'export' 
