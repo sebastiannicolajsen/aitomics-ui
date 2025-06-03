@@ -80,43 +80,29 @@ jobs:
           mkdir -p artifacts/macos
           mv dist/*.dmg dist/*.zip artifacts/macos/ 2>/dev/null || true
           cd artifacts/macos
-          # Use shasum on macOS
           for file in *; do
             if [ -f "$file" ]; then
               shasum -a 256 "$file" >> checksums.txt
             fi
           done
-          # Create release
-          gh release create ${{ github.ref_name }} \
-            --notes "${{ steps.release_notes.outputs.notes }}" \
-            --title "Release ${{ github.ref_name }}" \
-            *.dmg *.zip checksums.txt
 
       - name: Package Windows app
         if: matrix.os == 'windows-latest'
         shell: pwsh
         run: |
           npm run package-app
-          # Create artifacts directory
           New-Item -ItemType Directory -Force -Path artifacts/windows
-          # Copy exe files if they exist, ignore errors if they don't
           $exeFiles = Get-ChildItem -Path dist -Filter *.exe -ErrorAction SilentlyContinue
           if ($exeFiles) {
             $exeFiles | ForEach-Object {
               Copy-Item $_.FullName -Destination artifacts/windows/
             }
           }
-          # Create checksums
           Set-Location artifacts/windows
           Get-ChildItem -ErrorAction SilentlyContinue | ForEach-Object {
             $hash = (Get-FileHash $_.FullName -Algorithm SHA256).Hash
             "$hash  $($_.Name)" | Out-File -Append checksums.txt
           }
-          # Create release
-          gh release create ${{ github.ref_name }} \
-            --notes "${{ steps.release_notes.outputs.notes }}" \
-            --title "Release ${{ github.ref_name }}" \
-            *.exe checksums.txt
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
@@ -132,7 +118,7 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           path: artifacts
-          pattern: *-artifacts
+          pattern: "*-artifacts"
           merge-multiple: true
 
       - name: Create Release
