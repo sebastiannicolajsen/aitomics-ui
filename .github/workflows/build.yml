@@ -72,29 +72,33 @@ jobs:
 
       - name: Package macOS app
         if: matrix.os == 'macos-latest'
-        run: npm run package-app
+        shell: bash
+        run: |
+          npm run package-app
+          mkdir -p artifacts/macos
+          mv dist/*.dmg dist/*.zip artifacts/macos/ 2>/dev/null || true
+          cd artifacts/macos && sha256sum * > checksums.txt
 
       - name: Package Windows app
         if: matrix.os == 'windows-latest'
-        run: npm run package-app
-
-      - name: Prepare macOS artifacts
-        if: matrix.os == 'macos-latest'
+        shell: pwsh
         run: |
-          mkdir -p artifacts/macos
-          # Move DMG and ZIP files to artifacts directory
-          mv dist/*.dmg dist/*.zip artifacts/macos/ 2>/dev/null || true
-          # Create a checksums file
-          cd artifacts/macos && sha256sum * > checksums.txt
-
-      - name: Prepare Windows artifacts
-        if: matrix.os == 'windows-latest'
-        run: |
-          mkdir -p artifacts/windows
-          # Move NSIS installer and portable exe to artifacts directory
-          mv dist/*.exe artifacts/windows/ 2>/dev/null || true
-          # Create a checksums file
-          cd artifacts/windows && sha256sum * > checksums.txt
+          npm run package-app
+          # Create artifacts directory
+          New-Item -ItemType Directory -Force -Path artifacts/windows
+          # Copy exe files if they exist, ignore errors if they don't
+          $exeFiles = Get-ChildItem -Path dist -Filter *.exe -ErrorAction SilentlyContinue
+          if ($exeFiles) {
+            $exeFiles | ForEach-Object {
+              Copy-Item $_.FullName -Destination artifacts/windows/
+            }
+          }
+          # Create checksums
+          Set-Location artifacts/windows
+          Get-ChildItem -ErrorAction SilentlyContinue | ForEach-Object {
+            $hash = (Get-FileHash $_.FullName -Algorithm SHA256).Hash
+            "$hash  $($_.Name)" | Out-File -Append checksums.txt
+          }
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
