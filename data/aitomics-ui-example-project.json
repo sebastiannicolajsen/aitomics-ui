@@ -1,0 +1,287 @@
+{
+  "projects": [
+    {
+      "id": "18fa619a-d07d-4720-8d7f-b60c4908c31c",
+      "name": "Example project",
+      "description": "# Example project\nThis project uses the `customer_reviews.json` file found in the `/data` folder of the repository.\n\nYou should then set the `Only data`, `All results export`, and `Comparison` output files (`.csv`,`.json`, and `.txt` files respectively).\n\nYou can then click run, and, set up LM Studio (by enabling dev mode) to start running the project by clicking the run icon in the header of the project.",
+      "blocks": [
+        {
+          "id": "e4cf7fca-c6c6-47d2-adbf-b60b7a8c4022",
+          "type": "import",
+          "name": "Reviews",
+          "content": "",
+          "position": {
+            "x": 704.5459580236995,
+            "y": 413.3183123489756
+          },
+          "file": "/Users/sebni/Documents/Repositories/aitomics-ui/data/customer_reviews.json",
+          "actionId": "built-in-1",
+          "config": {
+            "Attribute Path": "text"
+          }
+        },
+        {
+          "id": "7dc7e2d1-e6b1-4441-beb5-b39891c737bc",
+          "type": "import",
+          "name": "Human codes",
+          "content": "",
+          "position": {
+            "x": 842.5230340637922,
+            "y": 668.8725841797522
+          },
+          "actionId": "built-in-1",
+          "config": {
+            "Attribute Path": "codes"
+          },
+          "file": "/Users/sebni/Documents/Repositories/aitomics-ui/data/customer_reviews.json"
+        },
+        {
+          "id": "5bd03789-4539-4361-a5a9-0d5a24918f69",
+          "type": "comparison",
+          "name": "IRR",
+          "content": "",
+          "position": {
+            "x": 1426.5476834221254,
+            "y": 697.8952378016986
+          },
+          "actionId": "built-in-11",
+          "config": {
+            "Categories": "POSITIVE, NEGATIVE, NEUTRAL",
+            "categories": [
+              "NEUTRAL",
+              "POSITIVE",
+              "NEGATIVE"
+            ],
+            "list": ""
+          }
+        },
+        {
+          "id": "eb83609e-181e-4363-aa6f-3fa9dc16511b",
+          "type": "export",
+          "name": "All results export",
+          "content": "",
+          "position": {
+            "x": 1845.5185497185025,
+            "y": 494.5541602982122
+          },
+          "actionId": "built-in-8",
+          "config": {},
+          "outputFilename": "results.json",
+          "outputPath": "/Users/sebni/Desktop/test"
+        },
+        {
+          "id": "5ba328f6-a44b-4fcd-acb5-b254c23957aa",
+          "type": "export",
+          "name": "Comparison",
+          "content": "",
+          "position": {
+            "x": 1836.1077118626226,
+            "y": 703.645743903358
+          },
+          "actionId": "built-in-8",
+          "config": {},
+          "outputFilename": "comparison-output",
+          "outputPath": "/Users/sebni/Desktop/test"
+        },
+        {
+          "id": "3b086aa5-3dab-4aa0-ad49-9f1955234fe1",
+          "type": "transform",
+          "name": "Uppercase",
+          "content": "",
+          "position": {
+            "x": 1284.527319569365,
+            "y": 466.70772218539696
+          },
+          "actionId": "built-in-5",
+          "config": {}
+        },
+        {
+          "id": "f9f87c0e-f550-454f-92b1-35d3321c6c28",
+          "type": "export",
+          "name": "Only data",
+          "content": "",
+          "position": {
+            "x": 1843.0706833138966,
+            "y": 290.43935780940825
+          },
+          "outputFilename": "only-data.csv",
+          "actionId": "built-in-10",
+          "config": {},
+          "outputPath": "/Users/sebni/Desktop/test"
+        },
+        {
+          "id": "0211b447-1784-40ef-897d-ab0435cd6f72",
+          "type": "transform",
+          "name": "Sentiment analysis",
+          "content": "",
+          "position": {
+            "x": 1030.5946165433766,
+            "y": 192.63010405317704
+          },
+          "actionId": "built-in-3",
+          "config": {
+            "prompt": "Categorize the following review using either **POSITIVE**, **NEUTRAL** or **NEGATIVE**.\nOnly return the label, no formatting (i.e., not **), nothing else."
+          }
+        }
+      ],
+      "edges": [
+        {
+          "id": "8769cf9e-b596-4a67-b186-defc3c945b1f",
+          "source": "e4cf7fca-c6c6-47d2-adbf-b60b7a8c4022",
+          "target": "2dd05bc6-6250-4e55-8c6f-60155d051ac7",
+          "sourceHandle": null,
+          "targetHandle": null,
+          "type": "custom",
+          "markerEnd": {
+            "type": "arrowclosed"
+          },
+          "style": {
+            "stroke": "#666666"
+          }
+        },
+        {
+          "id": "2340b4e1-81a9-4fdd-bc76-4f8b2643debe",
+          "source": "7dc7e2d1-e6b1-4441-beb5-b39891c737bc",
+          "target": "5bd03789-4539-4361-a5a9-0d5a24918f69",
+          "sourceHandle": null,
+          "targetHandle": null,
+          "type": "custom",
+          "markerEnd": {
+            "type": "arrowclosed"
+          },
+          "style": {
+            "stroke": "#666666"
+          }
+        },
+        {
+          "id": "6b3e2e36-3d5b-4f4a-a1e7-b77493462ab1",
+          "source": "5bd03789-4539-4361-a5a9-0d5a24918f69",
+          "target": "5ba328f6-a44b-4fcd-acb5-b254c23957aa",
+          "sourceHandle": null,
+          "targetHandle": null,
+          "type": "custom",
+          "markerEnd": {
+            "type": "arrowclosed"
+          },
+          "style": {
+            "stroke": "#666666"
+          }
+        },
+        {
+          "id": "05003d75-55c9-42f0-a8a1-8f232683c3da",
+          "source": "2dd05bc6-6250-4e55-8c6f-60155d051ac7",
+          "target": "3b086aa5-3dab-4aa0-ad49-9f1955234fe1",
+          "sourceHandle": null,
+          "targetHandle": null,
+          "type": "custom",
+          "markerEnd": {
+            "type": "arrowclosed"
+          },
+          "style": {
+            "stroke": "#666666"
+          }
+        },
+        {
+          "id": "e7428fdd-87b0-4475-a34f-a2924799e717",
+          "source": "3b086aa5-3dab-4aa0-ad49-9f1955234fe1",
+          "target": "eb83609e-181e-4363-aa6f-3fa9dc16511b",
+          "sourceHandle": null,
+          "targetHandle": null,
+          "type": "custom",
+          "markerEnd": {
+            "type": "arrowclosed"
+          },
+          "style": {
+            "stroke": "#666666"
+          }
+        },
+        {
+          "id": "67764e3d-4df3-4e1b-9494-af3badbf9ebd",
+          "source": "3b086aa5-3dab-4aa0-ad49-9f1955234fe1",
+          "target": "f9f87c0e-f550-454f-92b1-35d3321c6c28",
+          "sourceHandle": null,
+          "targetHandle": null,
+          "type": "custom",
+          "markerEnd": {
+            "type": "arrowclosed"
+          },
+          "style": {
+            "stroke": "#666666"
+          }
+        },
+        {
+          "id": "ac67f3db-55b9-4594-8835-51be928423ca",
+          "source": "e4cf7fca-c6c6-47d2-adbf-b60b7a8c4022",
+          "target": "0211b447-1784-40ef-897d-ab0435cd6f72",
+          "sourceHandle": null,
+          "targetHandle": null,
+          "type": "custom",
+          "markerEnd": {
+            "type": "arrowclosed"
+          },
+          "style": {
+            "stroke": "#666666"
+          }
+        },
+        {
+          "id": "7d330ff1-dd45-4eed-a2ec-80d964f68094",
+          "source": "3b086aa5-3dab-4aa0-ad49-9f1955234fe1",
+          "target": "5bd03789-4539-4361-a5a9-0d5a24918f69",
+          "sourceHandle": null,
+          "targetHandle": null,
+          "type": "custom",
+          "markerEnd": {
+            "type": "arrowclosed"
+          },
+          "style": {
+            "stroke": "#666666"
+          }
+        },
+        {
+          "id": "5911255a-f92b-4e2f-a782-8d1b25f09d22",
+          "source": "0211b447-1784-40ef-897d-ab0435cd6f72",
+          "target": "3b6b92e6-f6a5-4165-8b4e-723f49cbb15a",
+          "sourceHandle": null,
+          "targetHandle": null,
+          "type": "custom",
+          "markerEnd": {
+            "type": "arrowclosed"
+          },
+          "style": {
+            "stroke": "#666666"
+          }
+        },
+        {
+          "id": "20f23fce-b9b0-4c16-9cde-117cbfd520bc",
+          "source": "3b6b92e6-f6a5-4165-8b4e-723f49cbb15a",
+          "target": "3b086aa5-3dab-4aa0-ad49-9f1955234fe1",
+          "sourceHandle": null,
+          "targetHandle": null,
+          "type": "custom",
+          "markerEnd": {
+            "type": "arrowclosed"
+          },
+          "style": {
+            "stroke": "#666666"
+          }
+        },
+        {
+          "id": "726a06da-dd0d-4703-82cf-2077f4ce9b60",
+          "source": "0211b447-1784-40ef-897d-ab0435cd6f72",
+          "target": "3b086aa5-3dab-4aa0-ad49-9f1955234fe1",
+          "sourceHandle": null,
+          "targetHandle": null,
+          "type": "custom",
+          "markerEnd": {
+            "type": "arrowclosed"
+          },
+          "style": {
+            "stroke": "#666666"
+          }
+        }
+      ],
+      "createdAt": "2025-05-28T13:46:19.060Z",
+      "updatedAt": "2025-06-03T10:18:32.535Z"
+    }
+  ]
+}
