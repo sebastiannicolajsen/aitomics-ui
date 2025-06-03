@@ -27,7 +27,17 @@ import { VersionInfo as VersionInfoType, UpdateInfo, UpdateProgress } from '../t
 const RELEASES_URL = 'https://github.com/sebastiannicolajsen/aitomics-ui/releases';
 
 const ReleaseNotes: React.FC<{ notes: string }> = ({ notes }) => {
-  const sanitizedHTML = DOMPurify.sanitize(notes, {
+  // Clean up the release notes before sanitizing
+  const cleanNotes = notes
+    // Remove empty list items
+    .replace(/<li>\s*<p>\s*<\/p>\s*<\/li>/g, '')
+    // Remove empty paragraphs
+    .replace(/<p>\s*<\/p>/g, '')
+    // Clean up extra whitespace
+    .replace(/\s+/g, ' ')
+    .trim();
+
+  const sanitizedHTML = DOMPurify.sanitize(cleanNotes, {
     ALLOWED_TAGS: ['ul', 'li', 'p', 'a', 'tt'],
     ALLOWED_ATTR: ['href', 'class', 'data-hovercard-type', 'data-hovercard-url'],
   });
@@ -38,21 +48,27 @@ const ReleaseNotes: React.FC<{ notes: string }> = ({ notes }) => {
         listStyle: 'disc',
         pl: 2,
         mb: 0,
+        mt: 0,
       },
       '& li': {
         mb: 1,
         '&:last-child': {
           mb: 0,
         },
-      },
-      '& p': {
-        m: 0,
+        '& p': {
+          m: 0,
+          fontSize: '0.875rem',
+          lineHeight: 1.5,
+          color: 'text.primary',
+        },
       },
       '& a': {
         color: 'primary.main',
         textDecoration: 'none',
+        transition: 'all 0.2s ease-in-out',
         '&:hover': {
           textDecoration: 'underline',
+          color: 'primary.dark',
         },
       },
       '& tt': {
@@ -61,6 +77,7 @@ const ReleaseNotes: React.FC<{ notes: string }> = ({ notes }) => {
         background: 'rgba(0, 0, 0, 0.04)',
         padding: '0.1em 0.3em',
         borderRadius: '3px',
+        color: 'text.secondary',
       },
     }}>
       <div dangerouslySetInnerHTML={{ __html: sanitizedHTML }} />

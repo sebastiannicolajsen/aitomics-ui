@@ -110,29 +110,147 @@ let isAppReady = false;
 autoUpdater.autoDownload = false;
 autoUpdater.autoInstallOnAppQuit = false;
 
-// Auto-updater events
+// Add update-downloaded event handler with version verification
+autoUpdater.on('update-downloaded', (info) => {
+  console.log('Update downloaded:', info);
+  // Verify the new version is different from current
+  const currentVersion = app.getVersion();
+  if (info.version === currentVersion) {
+    console.warn('Downloaded version matches current version, skipping update');
+    if (mainWindow) {
+      mainWindow.webContents.send('update-status', 'error', 'Downloaded version matches current version');
+    }
+    return;
+  }
+  
+  if (mainWindow) {
+    mainWindow.webContents.send('update-status', 'downloaded', info);
+  }
+});
+
+// Add update-downloading event handler with progress logging
+autoUpdater.on('download-progress', (progress) => {
+  console.log('Download progress:', progress);
+  if (mainWindow) {
+    mainWindow.webContents.send('update-status', 'downloading', progress);
+  }
+});
+
+// Auto-updater events with enhanced logging
 autoUpdater.on('checking-for-update', () => {
+  console.log('Checking for updates...');
   if (mainWindow) {
     mainWindow.webContents.send('update-status', 'checking');
   }
 });
 
 autoUpdater.on('update-available', (info) => {
+  console.log('Update available:', info);
+  // Verify the new version is different from current
+  const currentVersion = app.getVersion();
+  if (info.version === currentVersion) {
+    console.warn('Available version matches current version, skipping update');
+    if (mainWindow) {
+      mainWindow.webContents.send('update-status', 'not-available');
+    }
+    return;
+  }
+  
   if (mainWindow) {
     mainWindow.webContents.send('update-status', 'available', info);
   }
 });
 
 autoUpdater.on('update-not-available', () => {
+  console.log('No update available');
   if (mainWindow) {
     mainWindow.webContents.send('update-status', 'not-available');
   }
 });
 
 autoUpdater.on('error', (err) => {
+  console.error('Auto-updater error:', err);
   if (mainWindow) {
     mainWindow.webContents.send('update-status', 'error', err.message);
   }
+});
+
+// Add version info handler with proper version resolution and caching
+let versionCache = null;
+let lastVersionCheck = 0;
+const VERSION_CACHE_DURATION = 5000; // 5 seconds
+
+ipcMain.handle('get-version-info', () => {
+  const now = Date.now();
+  
+  // Return cached version if available and not expired
+  if (versionCache && (now - lastVersionCheck) < VERSION_CACHE_DURATION) {
+    return versionCache;
+  }
+  
+  const appVersion = app.getVersion();
+  console.log('Current app version:', appVersion);
+  
+  // Try to get aitomics version from the correct location
+  let aitomicsVersion = '0.0.0';
+  try {
+    const aitomicsPath = app.isPackaged 
+      ? path.join(process.resourcesPath, 'app.asar.unpacked/node_modules/aitomics/package.json')
+      : path.join(__dirname, 'node_modules/aitomics/package.json');
+    
+    if (fs.existsSync(aitomicsPath)) {
+      const aitomicsPackage = JSON.parse(fs.readFileSync(aitomicsPath, 'utf8'));
+      aitomicsVersion = aitomicsPackage.version;
+    }
+  } catch (error) {
+    console.error('Error reading aitomics version:', error);
+  }
+  
+  // Update cache
+  versionCache = {
+    appVersion,
+    aitomicsVersion
+  };
+  lastVersionCheck = now;
+  
+  return versionCache;
+});
+
+// Add update handlers with proper error handling and version verification
+ipcMain.handle('check-for-updates', async () => {
+  try {
+    console.log('Checking for updates...');
+    // Clear version cache to force fresh version check
+    versionCache = null;
+    await autoUpdater.checkForUpdates();
+  } catch (error) {
+    console.error('Error checking for updates:', error);
+    if (mainWindow) {
+      mainWindow.webContents.send('update-status', 'error', error.message);
+    }
+  }
+});
+
+ipcMain.handle('download-update', async () => {
+  try {
+    console.log('Downloading update...');
+    // Clear version cache to force fresh version check
+    versionCache = null;
+    await autoUpdater.downloadUpdate();
+  } catch (error) {
+    console.error('Error downloading update:', error);
+    if (mainWindow) {
+      mainWindow.webContents.send('update-status', 'error', error.message);
+    }
+  }
+});
+
+ipcMain.handle('install-update', () => {
+  console.log('Installing update...');
+  // Clear version cache before installing
+  versionCache = null;
+  // Use quitAndInstall with force quit to ensure proper restart
+  autoUpdater.quitAndInstall(false, true);
 });
 
 // Register IPC handlers
@@ -974,25 +1092,41 @@ function registerIpcHandlers() {
     }
   });
 
-  // Add version info handler
-  ipcMain.handle('get-version-info', () => {
-    return {
-      appVersion: app.getVersion(),
-      aitomicsVersion: require('./node_modules/aitomics/package.json').version
-    };
+  // Add update handlers with proper error handling and version verification
+  ipcMain.handle('check-for-updates', async () => {
+    try {
+      console.log('Checking for updates...');
+      // Clear version cache to force fresh version check
+      versionCache = null;
+      await autoUpdater.checkForUpdates();
+    } catch (error) {
+      console.error('Error checking for updates:', error);
+      if (mainWindow) {
+        mainWindow.webContents.send('update-status', 'error', error.message);
+      }
+    }
   });
 
-  // Add update handlers
-  ipcMain.handle('check-for-updates', () => {
-    autoUpdater.checkForUpdates();
-  });
-
-  ipcMain.handle('download-update', () => {
-    autoUpdater.downloadUpdate();
+  ipcMain.handle('download-update', async () => {
+    try {
+      console.log('Downloading update...');
+      // Clear version cache to force fresh version check
+      versionCache = null;
+      await autoUpdater.downloadUpdate();
+    } catch (error) {
+      console.error('Error downloading update:', error);
+      if (mainWindow) {
+        mainWindow.webContents.send('update-status', 'error', error.message);
+      }
+    }
   });
 
   ipcMain.handle('install-update', () => {
-    autoUpdater.quitAndInstall();
+    console.log('Installing update...');
+    // Clear version cache before installing
+    versionCache = null;
+    // Use quitAndInstall with force quit to ensure proper restart
+    autoUpdater.quitAndInstall(false, true);
   });
 }
 

@@ -51,7 +51,8 @@
     "publish": {
       "provider": "github",
       "owner": "sebastiannicolajsen",
-      "repo": "aitomics-ui"
+      "repo": "aitomics-ui",
+      "releaseType": "release"
     },
     "mac": {
       "icon": "build/icon.icns",
@@ -76,7 +77,13 @@
     "nsis": {
       "oneClick": false,
       "allowToChangeInstallationDirectory": true,
-      "createDesktopShortcut": true
+      "createDesktopShortcut": true,
+      "deleteAppDataOnUninstall": false,
+      "perMachine": false,
+      "allowElevation": true,
+      "artifactName": "${productName}-Setup-${version}.${ext}",
+      "uninstallDisplayName": "${productName}",
+      "include": "build/installer.nsh"
     },
     "files": [
       "build/**/*",
@@ -115,50 +122,12 @@
     ],
     "extraResources": [
       {
-        "from": "src/renderer/build",
-        "to": "app.asar.unpacked/src/renderer/build",
-        "filter": [
-          "**/*"
-        ]
-      },
-      {
-        "from": "build/flow-dependencies",
-        "to": "app.asar.unpacked/build/flow-dependencies",
-        "filter": [
-          "**/*",
-          "node_modules/**/*"
-        ]
-      },
-      {
-        "from": "build/flow-dependencies/node_modules",
-        "to": "app.asar.unpacked/build/flow-dependencies/node_modules",
-        "filter": [
-          "**/*"
-        ]
-      },
-      {
-        "from": "scripts",
-        "to": "app.asar.unpacked/scripts",
-        "filter": [
-          "**/*"
-        ]
-      },
-      {
-        "from": "build/icon.icns",
-        "to": "icon.icns"
-      },
-      {
-        "from": "build/icon.png",
-        "to": "icon.png"
-      },
-      {
-        "from": "build/icon.ico",
-        "to": "icon.ico"
-      },
-      {
-        "from": "node_modules/node/bin/node",
-        "to": "app.asar.unpacked/node"
+        "from": "package.json",
+        "to": "package.json"
       }
-    ]
+    ],
+    "forceCodeSigning": false,
+    "removePackageScripts": true,
+    "removePackageKeywords": true
   }
 }
