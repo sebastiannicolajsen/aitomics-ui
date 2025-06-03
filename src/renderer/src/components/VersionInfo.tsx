@@ -37,10 +37,26 @@ const ReleaseNotes: React.FC<{ notes: string }> = ({ notes }) => {
     .replace(/\s+/g, ' ')
     .trim();
 
+  // Log the input and cleaned notes for debugging
+  console.log('Original notes:', notes);
+  console.log('Cleaned notes:', cleanNotes);
+
   const sanitizedHTML = DOMPurify.sanitize(cleanNotes, {
     ALLOWED_TAGS: ['ul', 'li', 'p', 'a', 'tt'],
     ALLOWED_ATTR: ['href', 'class', 'data-hovercard-type', 'data-hovercard-url'],
+    ALLOW_DATA_ATTR: true, // Allow data attributes
+    ADD_ATTR: ['target'], // Allow target attribute for links
+    ADD_TAGS: ['tt'], // Ensure tt tag is allowed
   });
+
+  // Log the sanitized HTML for debugging
+  console.log('Sanitized HTML:', sanitizedHTML);
+
+  // Create a temporary div to parse the HTML and ensure it's valid
+  const tempDiv = document.createElement('div');
+  tempDiv.innerHTML = sanitizedHTML;
+  const parsedHTML = tempDiv.innerHTML;
+  console.log('Parsed HTML:', parsedHTML);
 
   return (
     <Box sx={{ 
@@ -80,7 +96,7 @@ const ReleaseNotes: React.FC<{ notes: string }> = ({ notes }) => {
         color: 'text.secondary',
       },
     }}>
-      <div dangerouslySetInnerHTML={{ __html: sanitizedHTML }} />
+      <div dangerouslySetInnerHTML={{ __html: parsedHTML }} />
     </Box>
   );
 };
