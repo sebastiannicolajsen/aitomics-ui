@@ -50,22 +50,17 @@ jobs:
           PREV_TAG=$(git describe --tags --abbrev=0 HEAD^ 2>/dev/null || echo "")
           if [ -z "$PREV_TAG" ]; then
             echo "No previous tag found, using all commits"
-            RELEASE_NOTES=$(git log --pretty=format:"* %s (%h)" HEAD)
+            RELEASE_NOTES=$(git log --pretty=format:"- %s (%h)%n" HEAD)
           else
             echo "Generating notes from $PREV_TAG to HEAD"
-            RELEASE_NOTES=$(git log --pretty=format:"* %s (%h)" $PREV_TAG..HEAD)
+            RELEASE_NOTES=$(git log --pretty=format:"- %s (%h)%n" $PREV_TAG..HEAD)
           fi
           
           # Debug output (will be hidden in logs)
           echo "Generated release notes:"
           echo "$RELEASE_NOTES"
           
-          # Escape for GitHub Actions
-          RELEASE_NOTES="${RELEASE_NOTES//'%'/'%25'}"
-          RELEASE_NOTES="${RELEASE_NOTES//$'\n'/'%0A'}"
-          RELEASE_NOTES="${RELEASE_NOTES//$'\r'/'%0D'}"
-          
-          # Set output
+          # Set output without escaping newlines
           {
             echo "notes<<EOF"
             echo "$RELEASE_NOTES"
