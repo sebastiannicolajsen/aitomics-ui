@@ -5,6 +5,11 @@ on:
     tags:
       - 'v*'
 
+# Add permissions block at the workflow level
+permissions:
+  contents: write
+  packages: write
+
 jobs:
   build:
     runs-on: ${{ matrix.os }}
