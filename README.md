@@ -20,31 +20,34 @@ If you encounter any issues during installation or usage, please check the [Appl
 
 ### 1. Create flows for handling analysis of various data sources
 
-[insert gif]
+<div align="center">
+  <img src="docs/assets/gifs/aitomics-1.gif" width="50%" alt="Creating flows for data analysis">
+</div>
 
-### 2. Transform the data through multiple actions
+### 2. Create custom actions using aitomics or pure javascript
 
-[insert gif]
+<div align="center">
+  <img src="docs/assets/gifs/aitomics-2.gif" width="50%" alt="Transforming data through actions">
+</div>
 
-### 3. Create custom actions using aitomics or pure javascript
+### 3. Execute your flows using various llms
 
-[insert gif]
+<div align="center">
+  <img src="docs/assets/gifs/aitomics-3.gif" width="50%" alt="Executing flows with LLMs">
+</div>
 
-### 4. Execute your flows using various llms
+### 4. Get detailed feedback during execution
 
-[insert gif]
+<div align="center">
+  <img src="docs/assets/gifs/aitomics-4.gif" width="50%" alt="Detailed feedback">
+</div>
 
-### 5. Export different formats, including rich data formats from `aitomics` to track changes
 
-[insert gif]
+### Further, you can...
+- Export different formats, including rich data formats from `aitomics` to track changes.
+- Export the code to run yourself or modify it.
+- Do any kind of programmatic transformation while retaining traces.
 
-### 6. Get detailed feedback during execution
-
-[insert gif]
-
-### 7. Export the code to run yourself or modify it.
-
-[insert gif]
 
 ## Development Setup
 
