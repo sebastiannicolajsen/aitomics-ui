@@ -1170,8 +1170,23 @@ function createWindow() {
 
   // Check for updates after window is ready
   mainWindow.webContents.on('did-finish-load', () => {
-    if (!process.env.NODE_ENV === 'development') {
-      autoUpdater.checkForUpdates();
+    if (app.isPackaged && process.env.NODE_ENV === 'production') {
+      console.log('Checking for updates in production mode...');
+      autoUpdater.checkForUpdates().catch(err => {
+        console.error('Error checking for updates:', err);
+        // If the error is about publishing, we can ignore it since we're just checking
+        if (err.message.includes('publish')) {
+          console.log('Ignoring publish error - we only need to check for updates');
+          // Notify renderer that no update is available
+          mainWindow.webContents.send('update-status', 'not-available');
+        } else {
+          // For other errors, log them but don't show to user
+          console.error('Update check error details:', err);
+        }
+      });
+    } else {
+      console.log('Skipping update check in development mode');
+      mainWindow.webContents.send('update-status', 'not-available');
     }
   });
 }
