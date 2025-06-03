@@ -27,36 +27,10 @@ import { VersionInfo as VersionInfoType, UpdateInfo, UpdateProgress } from '../t
 const RELEASES_URL = 'https://github.com/sebastiannicolajsen/aitomics-ui/releases';
 
 const ReleaseNotes: React.FC<{ notes: string }> = ({ notes }) => {
-  // Clean up the release notes before sanitizing
-  const cleanNotes = notes
-    // Remove empty list items
-    .replace(/<li>\s*<p>\s*<\/p>\s*<\/li>/g, '')
-    // Remove empty paragraphs
-    .replace(/<p>\s*<\/p>/g, '')
-    // Clean up extra whitespace
-    .replace(/\s+/g, ' ')
-    .trim();
-
-  // Log the input and cleaned notes for debugging
-  console.log('Original notes:', notes);
-  console.log('Cleaned notes:', cleanNotes);
-
-  const sanitizedHTML = DOMPurify.sanitize(cleanNotes, {
+  const sanitizedHTML = DOMPurify.sanitize(notes, {
     ALLOWED_TAGS: ['ul', 'li', 'p', 'a', 'tt'],
     ALLOWED_ATTR: ['href', 'class', 'data-hovercard-type', 'data-hovercard-url'],
-    ALLOW_DATA_ATTR: true, // Allow data attributes
-    ADD_ATTR: ['target'], // Allow target attribute for links
-    ADD_TAGS: ['tt'], // Ensure tt tag is allowed
   });
-
-  // Log the sanitized HTML for debugging
-  console.log('Sanitized HTML:', sanitizedHTML);
-
-  // Create a temporary div to parse the HTML and ensure it's valid
-  const tempDiv = document.createElement('div');
-  tempDiv.innerHTML = sanitizedHTML;
-  const parsedHTML = tempDiv.innerHTML;
-  console.log('Parsed HTML:', parsedHTML);
 
   return (
     <Box sx={{ 
@@ -64,27 +38,21 @@ const ReleaseNotes: React.FC<{ notes: string }> = ({ notes }) => {
         listStyle: 'disc',
         pl: 2,
         mb: 0,
-        mt: 0,
       },
       '& li': {
         mb: 1,
         '&:last-child': {
           mb: 0,
         },
-        '& p': {
-          m: 0,
-          fontSize: '0.875rem',
-          lineHeight: 1.5,
-          color: 'text.primary',
-        },
+      },
+      '& p': {
+        m: 0,
       },
       '& a': {
         color: 'primary.main',
         textDecoration: 'none',
-        transition: 'all 0.2s ease-in-out',
         '&:hover': {
           textDecoration: 'underline',
-          color: 'primary.dark',
         },
       },
       '& tt': {
@@ -93,10 +61,9 @@ const ReleaseNotes: React.FC<{ notes: string }> = ({ notes }) => {
         background: 'rgba(0, 0, 0, 0.04)',
         padding: '0.1em 0.3em',
         borderRadius: '3px',
-        color: 'text.secondary',
       },
     }}>
-      <div dangerouslySetInnerHTML={{ __html: parsedHTML }} />
+      <div dangerouslySetInnerHTML={{ __html: sanitizedHTML }} />
     </Box>
   );
 };
