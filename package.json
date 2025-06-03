@@ -12,7 +12,7 @@
     "test": "jest",
     "pack": "electron-builder --dir",
     "dist": "electron-builder",
-    "publish": "electron-builder -p always",
+    "publish": "electron-builder -p always --releaseNotes \"$RELEASE_NOTES\"",
     "release": "node scripts/release.js",
     "package-app": "cd src/renderer && npm run build && cd ../.. && npm run build-preload && npm run prepare-flow-deps && npm run dist",
     "build:ci": "node scripts/build-ci.js"
