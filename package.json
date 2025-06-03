@@ -11,7 +11,7 @@
     "build-preload": "tsc src/renderer/src/preload.ts --outDir src/renderer/src --module commonjs --esModuleInterop true --skipLibCheck true --sourceMap true",
     "test": "jest",
     "pack": "electron-builder --dir",
-    "dist": "electron-builder",
+    "dist": "electron-builder -p always",
     "publish": "electron-builder -p always --releaseNotes \"$RELEASE_NOTES\"",
     "release": "node scripts/release.js",
     "package-app": "cd src/renderer && npm run build && cd ../.. && npm run build-preload && npm run prepare-flow-deps && npm run dist",

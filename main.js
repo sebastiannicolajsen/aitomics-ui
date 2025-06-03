@@ -108,7 +108,7 @@ let isAppReady = false;
 
 // Configure auto-updater
 autoUpdater.autoDownload = false;
-autoUpdater.autoInstallOnAppQuit = true;
+autoUpdater.autoInstallOnAppQuit = false;
 
 // Auto-updater events
 autoUpdater.on('checking-for-update', () => {
@@ -132,18 +132,6 @@ autoUpdater.on('update-not-available', () => {
 autoUpdater.on('error', (err) => {
   if (mainWindow) {
     mainWindow.webContents.send('update-status', 'error', err.message);
-  }
-});
-
-autoUpdater.on('download-progress', (progressObj) => {
-  if (mainWindow) {
-    mainWindow.webContents.send('update-status', 'downloading', progressObj);
-  }
-});
-
-autoUpdater.on('update-downloaded', (info) => {
-  if (mainWindow) {
-    mainWindow.webContents.send('update-status', 'downloaded', info);
   }
 });
 

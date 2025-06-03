@@ -13,6 +13,7 @@ import {
   Stack,
   Chip,
   Link,
+  Badge,
 } from '@mui/material';
 import InfoIcon from '@mui/icons-material/Info';
 import UpdateIcon from '@mui/icons-material/Update';
@@ -27,7 +28,7 @@ const RELEASES_URL = 'https://github.com/sebastiannicolajsen/aitomics-ui/release
 const VersionInfo: React.FC = () => {
   const [versionInfo, setVersionInfo] = useState<VersionInfoType | null>(null);
   const [isInfoDialogOpen, setIsInfoDialogOpen] = useState(false);
-  const [updateStatus, setUpdateStatus] = useState<string>('');
+  const [updateStatus, setUpdateStatus] = useState<string>('not-available');
   const [updateInfo, setUpdateInfo] = useState<UpdateInfo | null>(null);
   const [updateProgress, setUpdateProgress] = useState<UpdateProgress | null>(null);
   const [isUpdateDialogOpen, setIsUpdateDialogOpen] = useState(false);
@@ -41,7 +42,6 @@ const VersionInfo: React.FC = () => {
       setUpdateStatus(status);
       if (status === 'available' && info) {
         setUpdateInfo(info as UpdateInfo);
-        setIsUpdateDialogOpen(true);
       } else if (status === 'downloading' && info) {
         setUpdateProgress(info as UpdateProgress);
       } else if (status === 'downloaded') {
@@ -75,95 +75,71 @@ const VersionInfo: React.FC = () => {
 
   return (
     <>
-      <Box sx={{ 
-        display: 'flex', 
-        alignItems: 'center', 
-        gap: 1,
-        background: 'linear-gradient(145deg, #ffffff 0%, #f8f8f9 100%)',
-        borderRadius: '8px',
-        p: 0.75,
-        border: '1px solid rgba(0, 0, 0, 0.06)',
-        transition: 'all 0.2s ease-in-out',
-        '&:hover': {
-          background: 'linear-gradient(145deg, #f8f8f9 0%, #f0f0f1 100%)',
-          boxShadow: '0 2px 8px rgba(0, 0, 0, 0.04)',
-        }
-      }}>
-        <Tooltip title="App Information">
-          <IconButton
-            size="small"
-            onClick={() => setIsInfoDialogOpen(true)}
-            sx={{
-              color: 'text.secondary',
-              transition: 'all 0.2s ease-in-out',
-              p: 0.5,
-              '&:hover': {
-                color: 'primary.main',
-                background: 'rgba(16, 163, 127, 0.08)',
-              },
-            }}
-          >
-            <InfoIcon sx={{ fontSize: '1rem' }} />
-          </IconButton>
-        </Tooltip>
-        <Typography variant="caption" sx={{ 
-          color: 'text.secondary',
-          fontWeight: 500,
-          fontSize: '0.75rem',
-          px: 0.5,
-        }}>
-          v{versionInfo?.appVersion}
-        </Typography>
-        {versionInfo?.appVersion && isBetaVersion(versionInfo.appVersion) && (
-          <Chip
-            size="small"
-            label="BETA"
-            sx={{
-              height: '18px',
-              fontSize: '0.65rem',
-              fontWeight: 600,
-              background: 'linear-gradient(145deg, #fff3cd 0%, #ffe69c 100%)',
-              color: '#856404',
-              border: '1px solid rgba(255, 193, 7, 0.2)',
-              borderRadius: '4px',
-              '& .MuiChip-label': {
-                px: 0.75,
-                py: 0.25,
-              },
-            }}
-          />
-        )}
+      <Box 
+        onClick={() => setIsInfoDialogOpen(true)}
+        sx={{ 
+          display: 'flex', 
+          flexDirection: 'column',
+          gap: 0.5,
+          background: 'linear-gradient(145deg, #ffffff 0%, #f8f8f9 100%)',
+          borderRadius: '8px',
+          p: 0.75,
+          border: '1px solid rgba(0, 0, 0, 0.06)',
+          transition: 'all 0.2s ease-in-out',
+          cursor: 'pointer',
+          '&:hover': {
+            background: 'linear-gradient(145deg, #f8f8f9 0%, #f0f0f1 100%)',
+            boxShadow: '0 2px 8px rgba(0, 0, 0, 0.04)',
+          }
+        }}
+      >
         <Box sx={{ 
-          width: '1px', 
-          height: '16px', 
-          background: 'rgba(0, 0, 0, 0.08)',
-          mx: 0.5,
-        }} />
-        <Typography variant="caption" sx={{ 
-          color: 'text.secondary',
-          fontWeight: 500,
-          fontSize: '0.75rem',
+          display: 'flex', 
+          alignItems: 'center', 
+          gap: 1,
         }}>
-          Aitomics v{versionInfo?.aitomicsVersion}
-        </Typography>
-        <Tooltip title="Check for Updates">
-          <IconButton
-            size="small"
-            onClick={handleCheckForUpdates}
-            sx={{
-              color: 'text.secondary',
-              transition: 'all 0.2s ease-in-out',
-              p: 0.5,
-              ml: 0.5,
-              '&:hover': {
-                color: 'primary.main',
-                background: 'rgba(16, 163, 127, 0.08)',
-              },
-            }}
-          >
-            <UpdateIcon sx={{ fontSize: '1rem' }} />
-          </IconButton>
-        </Tooltip>
+          <Box sx={{ 
+            display: 'flex',
+            alignItems: 'center',
+            color: updateStatus === 'available' ? 'primary.main' : 'text.secondary',
+            transition: 'all 0.2s ease-in-out',
+          }}>
+            {updateStatus === 'available' ? (
+              <UpdateIcon sx={{ fontSize: '1rem' }} />
+            ) : (
+              <InfoIcon sx={{ fontSize: '1rem' }} />
+            )}
+          </Box>
+          <Typography variant="caption" sx={{ 
+            color: updateStatus === 'available' ? 'primary.main' : 'text.secondary',
+            fontWeight: 500,
+            fontSize: '0.75rem',
+          }}>
+            v{versionInfo?.appVersion}
+            {updateStatus === 'available' && updateInfo && (
+              <> → v{updateInfo.version}</>
+            )}
+          </Typography>
+          {versionInfo?.appVersion && isBetaVersion(versionInfo.appVersion) && (
+            <Chip
+              size="small"
+              label="BETA"
+              sx={{
+                height: '18px',
+                fontSize: '0.65rem',
+                fontWeight: 600,
+                background: 'linear-gradient(145deg, #fff3cd 0%, #ffe69c 100%)',
+                color: '#856404',
+                border: '1px solid rgba(255, 193, 7, 0.2)',
+                borderRadius: '4px',
+                '& .MuiChip-label': {
+                  px: 0.75,
+                  py: 0.25,
+                },
+              }}
+            />
+          )}
+        </Box>
       </Box>
 
       {/* App Info Dialog */}
@@ -196,7 +172,7 @@ const VersionInfo: React.FC = () => {
             fontWeight: 600,
             color: 'text.primary',
           }}>
-            Application Information
+            Version Information
           </Typography>
           <IconButton
             onClick={() => setIsInfoDialogOpen(false)}
@@ -215,101 +191,139 @@ const VersionInfo: React.FC = () => {
           </IconButton>
         </DialogTitle>
         <DialogContent sx={{ px: 3, py: 2.5 }}>
-          <Stack spacing={2.5}>
-            <Box sx={{ mt: 1 }}>
-              <Typography variant="subtitle2" sx={{ 
-                color: 'text.secondary',
-                fontSize: '0.75rem',
-                fontWeight: 600,
-                mb: 1,
-              }}>
-                Application Version
-              </Typography>
-              <Box sx={{ 
-                display: 'flex', 
-                alignItems: 'center', 
-                gap: 1,
-                background: 'linear-gradient(145deg, #ffffff 0%, #f8f8f9 100%)',
-                borderRadius: '8px',
-                p: 1.5,
-                border: '1px solid rgba(0, 0, 0, 0.06)',
-              }}>
+          <Stack spacing={2}>
+            <Box sx={{ 
+              display: 'flex',
+              alignItems: 'center',
+              gap: 2,
+              background: 'linear-gradient(145deg, #ffffff 0%, #f8f8f9 100%)',
+              borderRadius: '8px',
+              p: 1.5,
+              border: '1px solid rgba(0, 0, 0, 0.06)',
+            }}>
+              <Box sx={{ flex: 1 }}>
+                <Typography variant="subtitle2" sx={{ 
+                  color: 'text.secondary',
+                  fontSize: '0.75rem',
+                  fontWeight: 600,
+                  mb: 0.5,
+                }}>
+                  Current Version
+                </Typography>
                 <Typography variant="body1" sx={{ 
                   fontSize: '0.875rem',
                   fontWeight: 500,
                   color: 'text.primary',
                 }}>
-                  {versionInfo?.appVersion}
+                  v{versionInfo?.appVersion}
+                  {versionInfo?.appVersion && isBetaVersion(versionInfo.appVersion) && (
+                    <Chip
+                      size="small"
+                      label="BETA"
+                      sx={{
+                        ml: 1,
+                        height: '20px',
+                        fontSize: '0.7rem',
+                        fontWeight: 600,
+                        background: 'linear-gradient(145deg, #fff3cd 0%, #ffe69c 100%)',
+                        color: '#856404',
+                        border: '1px solid rgba(255, 193, 7, 0.2)',
+                        borderRadius: '4px',
+                        '& .MuiChip-label': {
+                          px: 1,
+                        },
+                      }}
+                    />
+                  )}
                 </Typography>
-                {versionInfo?.appVersion && isBetaVersion(versionInfo.appVersion) && (
-                  <Chip
-                    size="small"
-                    label="BETA"
-                    sx={{
-                      height: '20px',
-                      fontSize: '0.7rem',
-                      fontWeight: 600,
-                      background: 'linear-gradient(145deg, #fff3cd 0%, #ffe69c 100%)',
-                      color: '#856404',
-                      border: '1px solid rgba(255, 193, 7, 0.2)',
-                      borderRadius: '4px',
-                      '& .MuiChip-label': {
-                        px: 1,
-                      },
-                    }}
-                  />
-                )}
               </Box>
+              {updateStatus === 'available' && updateInfo ? (
+                <Box sx={{ flex: 1 }}>
+                  <Typography variant="subtitle2" sx={{ 
+                    color: 'text.secondary',
+                    fontSize: '0.75rem',
+                    fontWeight: 600,
+                    mb: 0.5,
+                  }}>
+                    Latest Version
+                  </Typography>
+                  <Typography variant="body1" sx={{ 
+                    fontSize: '0.875rem',
+                    fontWeight: 500,
+                    color: 'primary.main',
+                  }}>
+                    v{updateInfo.version}
+                  </Typography>
+                </Box>
+              ) : (
+                <Box sx={{ flex: 1 }}>
+                  <Typography variant="subtitle2" sx={{ 
+                    color: 'text.secondary',
+                    fontSize: '0.75rem',
+                    fontWeight: 600,
+                    mb: 0.5,
+                  }}>
+                    Aitomics Version
+                  </Typography>
+                  <Typography variant="body1" sx={{ 
+                    fontSize: '0.875rem',
+                    fontWeight: 500,
+                    color: 'text.primary',
+                  }}>
+                    v{versionInfo?.aitomicsVersion}
+                  </Typography>
+                </Box>
+              )}
             </Box>
-            <Box>
-              <Typography variant="subtitle2" sx={{ 
-                color: 'text.secondary',
-                fontSize: '0.75rem',
-                fontWeight: 600,
-                mb: 1,
-              }}>
-                Aitomics Version
-              </Typography>
+
+            {updateStatus === 'available' && updateInfo?.releaseNotes && (
               <Box sx={{ 
                 background: 'linear-gradient(145deg, #ffffff 0%, #f8f8f9 100%)',
                 borderRadius: '8px',
                 p: 1.5,
                 border: '1px solid rgba(0, 0, 0, 0.06)',
               }}>
-                <Typography variant="body1" sx={{ 
-                  fontSize: '0.875rem',
-                  fontWeight: 500,
-                  color: 'text.primary',
+                <Typography variant="subtitle2" sx={{ 
+                  color: 'text.secondary',
+                  fontSize: '0.75rem',
+                  fontWeight: 600,
+                  mb: 1,
                 }}>
-                  {versionInfo?.aitomicsVersion}
+                  Release Notes
+                </Typography>
+                <Typography variant="body2" sx={{ 
+                  whiteSpace: 'pre-wrap',
+                  fontSize: '0.875rem',
+                  color: 'text.primary',
+                  lineHeight: 1.5,
+                }}>
+                  {updateInfo.releaseNotes}
                 </Typography>
               </Box>
-            </Box>
-            <Box>
+            )}
+
+            {updateStatus === 'available' && (
               <Button
-                variant="outlined"
-                startIcon={<LaunchIcon sx={{ fontSize: '1.1rem' }} />}
+                variant="contained"
+                startIcon={<LaunchIcon />}
                 component={Link}
                 href={RELEASES_URL}
                 target="_blank"
                 rel="noopener noreferrer"
                 onClick={() => window.electron?.ipcRenderer.invoke('open-external-link', RELEASES_URL)}
                 sx={{ 
-                  mt: 1,
-                  borderRadius: '8px',
-                  borderColor: 'rgba(16, 163, 127, 0.2)',
-                  color: 'primary.main',
-                  background: 'linear-gradient(145deg, #ffffff 0%, #f8f8f9 100%)',
+                  alignSelf: 'flex-start',
+                  background: 'linear-gradient(145deg, #10a37f 0%, #0d8c6d 100%)',
+                  boxShadow: '0 2px 8px rgba(16, 163, 127, 0.2)',
                   '&:hover': {
-                    background: 'linear-gradient(145deg, #e6f7f1 0%, #d1f0e6 100%)',
-                    borderColor: 'primary.main',
-                    boxShadow: '0 2px 8px rgba(16, 163, 127, 0.15)',
+                    background: 'linear-gradient(145deg, #0d8c6d 0%, #0b7a5d 100%)',
+                    boxShadow: '0 4px 12px rgba(16, 163, 127, 0.25)',
                   },
                 }}
               >
-                Download Latest Release
+                Download Update
               </Button>
-            </Box>
+            )}
           </Stack>
         </DialogContent>
       </Dialog>
