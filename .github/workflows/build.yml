@@ -77,7 +77,13 @@ jobs:
           npm run package-app
           mkdir -p artifacts/macos
           mv dist/*.dmg dist/*.zip artifacts/macos/ 2>/dev/null || true
-          cd artifacts/macos && sha256sum * > checksums.txt
+          cd artifacts/macos
+          # Use shasum on macOS
+          for file in *; do
+            if [ -f "$file" ]; then
+              shasum -a 256 "$file" >> checksums.txt
+            fi
+          done
 
       - name: Package Windows app
         if: matrix.os == 'windows-latest'
