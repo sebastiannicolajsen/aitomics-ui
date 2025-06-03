@@ -21,9 +21,52 @@ import CloseIcon from '@mui/icons-material/Close';
 import DownloadIcon from '@mui/icons-material/Download';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import LaunchIcon from '@mui/icons-material/Launch';
+import DOMPurify from 'dompurify';
 import { VersionInfo as VersionInfoType, UpdateInfo, UpdateProgress } from '../types/electron';
 
 const RELEASES_URL = 'https://github.com/sebastiannicolajsen/aitomics-ui/releases';
+
+const ReleaseNotes: React.FC<{ notes: string }> = ({ notes }) => {
+  const sanitizedHTML = DOMPurify.sanitize(notes, {
+    ALLOWED_TAGS: ['ul', 'li', 'p', 'a', 'tt'],
+    ALLOWED_ATTR: ['href', 'class', 'data-hovercard-type', 'data-hovercard-url'],
+  });
+
+  return (
+    <Box sx={{ 
+      '& ul': {
+        listStyle: 'disc',
+        pl: 2,
+        mb: 0,
+      },
+      '& li': {
+        mb: 1,
+        '&:last-child': {
+          mb: 0,
+        },
+      },
+      '& p': {
+        m: 0,
+      },
+      '& a': {
+        color: 'primary.main',
+        textDecoration: 'none',
+        '&:hover': {
+          textDecoration: 'underline',
+        },
+      },
+      '& tt': {
+        fontFamily: 'monospace',
+        fontSize: '0.85em',
+        background: 'rgba(0, 0, 0, 0.04)',
+        padding: '0.1em 0.3em',
+        borderRadius: '3px',
+      },
+    }}>
+      <div dangerouslySetInnerHTML={{ __html: sanitizedHTML }} />
+    </Box>
+  );
+};
 
 const VersionInfo: React.FC = () => {
   const [versionInfo, setVersionInfo] = useState<VersionInfoType | null>(null);
@@ -291,14 +334,7 @@ const VersionInfo: React.FC = () => {
                 }}>
                   Release Notes
                 </Typography>
-                <Typography variant="body2" sx={{ 
-                  whiteSpace: 'pre-wrap',
-                  fontSize: '0.875rem',
-                  color: 'text.primary',
-                  lineHeight: 1.5,
-                }}>
-                  {updateInfo.releaseNotes}
-                </Typography>
+                <ReleaseNotes notes={updateInfo.releaseNotes} />
               </Box>
             )}
 
@@ -474,14 +510,7 @@ const VersionInfo: React.FC = () => {
                   }}>
                     Release Notes
                   </Typography>
-                  <Typography variant="body2" sx={{ 
-                    whiteSpace: 'pre-wrap',
-                    fontSize: '0.875rem',
-                    color: 'text.primary',
-                    lineHeight: 1.5,
-                  }}>
-                    {updateInfo.releaseNotes}
-                  </Typography>
+                  <ReleaseNotes notes={updateInfo.releaseNotes} />
                 </Box>
               )}
             </Stack>
@@ -509,14 +538,7 @@ const VersionInfo: React.FC = () => {
                   }}>
                     Release Notes
                   </Typography>
-                  <Typography variant="body2" sx={{ 
-                    whiteSpace: 'pre-wrap',
-                    fontSize: '0.875rem',
-                    color: 'text.primary',
-                    lineHeight: 1.5,
-                  }}>
-                    {updateInfo.releaseNotes}
-                  </Typography>
+                  <ReleaseNotes notes={updateInfo.releaseNotes} />
                 </Box>
               )}
             </Stack>
