@@ -97,6 +97,7 @@
     },
     "asar": true,
     "asarUnpack": [
+      "package.json",
       "src/renderer/build/**/*",
       "node_modules/ajv/**/*",
       "node_modules/conf/**/*",
