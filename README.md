@@ -7,7 +7,7 @@ A local desktop application for managing Aitomics projects with a block-based co
 
 ## 📋 Requirements
 
-This application requires [LM Studio](https://lmstudio.ai/) to be installed on your system, as `aitomics` and `aitomics-ui` rely on it for local language model operations. Please ensure you have LM Studio installed before proceeding with the installation (you will use this tool to install models locally).
+This application requires [LM Studio](https://lmstudio.ai/) to be installed on your system, as `aitomics` and `aitomics-ui` rely on it for local language model operations. Please ensure you have LM Studio installed before proceeding with the installation (you will use this tool to install models locally). **Make sure you navigate to the developer tab, and allow it to run**.
 
 # 💻 Install
 
