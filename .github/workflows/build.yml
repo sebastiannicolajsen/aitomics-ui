@@ -82,7 +82,7 @@ jobs:
           cd artifacts/macos
           for file in *; do
             if [ -f "$file" ]; then
-              shasum -a 256 "$file" >> checksums.txt
+              shasum -a 256 "$file" >> macos-checksums.txt
             fi
           done
 
@@ -101,7 +101,7 @@ jobs:
           Set-Location artifacts/windows
           Get-ChildItem -ErrorAction SilentlyContinue | ForEach-Object {
             $hash = (Get-FileHash $_.FullName -Algorithm SHA256).Hash
-            "$hash  $($_.Name)" | Out-File -Append checksums.txt
+            "$hash  $($_.Name)" | Out-File -Append windows-checksums.txt
           }
 
       - name: Upload artifacts
@@ -129,8 +129,8 @@ jobs:
           files: |
             artifacts/macos/*.dmg
             artifacts/macos/*.zip
-            artifacts/macos/checksums.txt
+            artifacts/macos/macos-checksums.txt
             artifacts/windows/*.exe
-            artifacts/windows/checksums.txt
+            artifacts/windows/windows-checksums.txt
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} 
