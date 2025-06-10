@@ -13,8 +13,8 @@ This application requires [LM Studio](https://lmstudio.ai/) to be installed on y
 
 ## 📦 Release Version
 Download the latest release for your operating system:
-- **macOS**: Download the `.dmg` file from the [latest release](https://github.com/aitomics/aitomics-ui/releases/latest)
-- **Windows**: Download the `.exe` installer from the [latest release](https://github.com/aitomics/aitomics-ui/releases/latest)
+- **macOS**: Download the `.dmg` file from the [latest release](https://github.com/sebastiannicolajsen/aitomics-ui/releases/latest)
+- **Windows**: Download the `.exe` installer from the [latest release](https://github.com/sebastiannicolajsen/aitomics-ui/releases/latest)
 
 If you encounter any issues during installation or usage, please check the [Application Logs](#application-logs) section for troubleshooting.
 
