@@ -380,7 +380,7 @@ const App: React.FC = () => {
               gap: 2
             }}>
               <img 
-                src={process.env.NODE_ENV === 'development' ? logo : './static/media/logo.546042dce2b67c756c718d2342a02404.svg'} 
+                src={process.env.NODE_ENV === 'development' ? logo : './logo.svg'} 
                 alt="Aitomics Logo" 
                 style={{ 
                   width: '120px', 

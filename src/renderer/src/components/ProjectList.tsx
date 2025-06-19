@@ -329,7 +329,7 @@ const ProjectList: React.FC<ProjectListProps> = ({
       }}>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2, px: 1 }}>
           <img 
-            src={process.env.NODE_ENV === 'development' ? logo : './static/media/logo.546042dce2b67c756c718d2342a02404.svg'} 
+            src={process.env.NODE_ENV === 'development' ? logo : './logo.svg'} 
             alt="Aitomics Logo" 
             style={{ width: '24px', height: '24px' }} 
           />

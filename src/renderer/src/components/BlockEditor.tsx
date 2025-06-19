@@ -1504,7 +1504,7 @@ const BlockEditor: React.FC<BlockEditorProps> = ({
             }}
           >
             <UploadIcon sx={{ fontSize: '0.875rem' }} />
-            {data.file.split('/').pop() || data.file}
+            {data.file.split(/[/\\]/).pop() || data.file}
           </Typography>
         )}
         {isConnecting && (
@@ -1813,7 +1813,7 @@ const BlockEditor: React.FC<BlockEditorProps> = ({
             }}
           >
             <DownloadIcon sx={{ fontSize: '0.875rem' }} />
-            {data.outputFilename || 'output'} → {data.outputPath}
+            {data.outputFilename || 'output'} → {data.outputPath.split(/[/\\]/).pop() || data.outputPath}
           </Typography>
         )}
         {isConnecting && (

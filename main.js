@@ -6,7 +6,6 @@ const { parse } = require('csv-parse/sync');
 const { spawn } = require('child_process');
 const Module = require('module');  // Add Module for proper module loading
 const fetch = require('node-fetch');
-const { autoUpdater } = require('electron-updater');
 
 // Get the correct path for the scripts directory
 const scriptsPath = app.isPackaged 
@@ -105,35 +104,6 @@ console.log('Starting app in mode:', process.env.NODE_ENV);
 let mainWindow = null;
 let currentFlowProcess = null;
 let isAppReady = false;
-
-// Configure auto-updater
-autoUpdater.autoDownload = false;
-autoUpdater.autoInstallOnAppQuit = false;
-
-// Auto-updater events
-autoUpdater.on('checking-for-update', () => {
-  if (mainWindow) {
-    mainWindow.webContents.send('update-status', 'checking');
-  }
-});
-
-autoUpdater.on('update-available', (info) => {
-  if (mainWindow) {
-    mainWindow.webContents.send('update-status', 'available', info);
-  }
-});
-
-autoUpdater.on('update-not-available', () => {
-  if (mainWindow) {
-    mainWindow.webContents.send('update-status', 'not-available');
-  }
-});
-
-autoUpdater.on('error', (err) => {
-  if (mainWindow) {
-    mainWindow.webContents.send('update-status', 'error', err.message);
-  }
-});
 
 // Register IPC handlers
 function registerIpcHandlers() {
@@ -1022,17 +992,70 @@ function registerIpcHandlers() {
     };
   });
 
-  // Add update handlers
-  ipcMain.handle('check-for-updates', () => {
-    autoUpdater.checkForUpdates();
+  // Add lightweight update check handler (replaces auto-updater)
+  ipcMain.handle('check-for-updates', async () => {
+    try {
+      // Fetch latest release from GitHub API
+      const response = await fetch('https://api.github.com/repos/sebastiannicolajsen/aitomics-ui/releases/latest');
+      if (!response.ok) {
+        throw new Error('Failed to fetch latest release');
+      }
+      
+      const release = await response.json();
+      const latestVersion = release.tag_name.replace('v', ''); // Remove 'v' prefix
+      
+      // Get current version from package.json
+      let currentVersion;
+      let packageJsonPath;
+      if (app.isPackaged) {
+        packageJsonPath = path.join(process.resourcesPath, 'app.asar.unpacked/package.json');
+      } else {
+        packageJsonPath = path.join(__dirname, 'package.json');
+      }
+      
+      try {
+        const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, 'utf8'));
+        currentVersion = packageJson.version;
+      } catch (err) {
+        console.error('Error reading current version:', err);
+        currentVersion = app.getVersion();
+      }
+      
+      console.log('Checking for updates:', { current: currentVersion, latest: latestVersion });
+      
+      if (latestVersion !== currentVersion) {
+        // Send update available status
+        if (mainWindow) {
+          mainWindow.webContents.send('update-status', 'available', {
+            version: latestVersion,
+            releaseDate: release.published_at,
+            releaseNotes: release.body
+          });
+        }
+      } else {
+        // Send no update available status
+        if (mainWindow) {
+          mainWindow.webContents.send('update-status', 'not-available');
+        }
+      }
+    } catch (error) {
+      console.error('Error checking for updates:', error);
+      // Send error status
+      if (mainWindow) {
+        mainWindow.webContents.send('update-status', 'error', error.message);
+      }
+    }
   });
 
+  // Add placeholder handlers for update actions (since we're not using auto-updater)
   ipcMain.handle('download-update', () => {
-    autoUpdater.downloadUpdate();
+    // This would open the GitHub releases page instead
+    shell.openExternal('https://github.com/sebastiannicolajsen/aitomics-ui/releases/latest');
   });
 
   ipcMain.handle('install-update', () => {
-    autoUpdater.quitAndInstall();
+    // This would open the GitHub releases page instead
+    shell.openExternal('https://github.com/sebastiannicolajsen/aitomics-ui/releases/latest');
   });
 }
 
@@ -1210,24 +1233,73 @@ function createWindow() {
 
   // Check for updates after window is ready
   mainWindow.webContents.on('did-finish-load', () => {
-    if (app.isPackaged && process.env.NODE_ENV === 'production') {
-      console.log('Checking for updates in production mode...');
-      autoUpdater.checkForUpdates().catch(err => {
-        console.error('Error checking for updates:', err);
-        // If the error is about publishing, we can ignore it since we're just checking
-        if (err.message.includes('publish')) {
-          console.log('Ignoring publish error - we only need to check for updates');
-          // Notify renderer that no update is available
-          mainWindow.webContents.send('update-status', 'not-available');
-        } else {
-          // For other errors, log them but don't show to user
-          console.error('Update check error details:', err);
+    // Perform a non-blocking update check after app loads
+    console.log('App loaded successfully - performing background update check');
+    
+    // Use setTimeout to make it non-blocking
+    setTimeout(async () => {
+      console.log('Starting background update check...');
+      try {
+        // Fetch latest release from GitHub API
+        console.log('Fetching latest release from GitHub...');
+        const response = await fetch('https://api.github.com/repos/sebastiannicolajsen/aitomics-ui/releases/latest');
+        console.log('GitHub API response status:', response.status);
+        if (!response.ok) {
+          throw new Error('Failed to fetch latest release');
         }
-      });
-    } else {
-      console.log('Skipping update check in development mode');
-      mainWindow.webContents.send('update-status', 'not-available');
-    }
+        
+        const release = await response.json();
+        const latestVersion = release.tag_name.replace('v', ''); // Remove 'v' prefix
+        console.log('Latest version from GitHub:', latestVersion);
+        
+        // Get current version from package.json
+        let currentVersion;
+        let packageJsonPath;
+        if (app.isPackaged) {
+          packageJsonPath = path.join(process.resourcesPath, 'app.asar.unpacked/package.json');
+        } else {
+          packageJsonPath = path.join(__dirname, 'package.json');
+        }
+        
+        console.log('Reading package.json from:', packageJsonPath);
+        try {
+          const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, 'utf8'));
+          currentVersion = packageJson.version;
+          console.log('Current version from package.json:', currentVersion);
+        } catch (err) {
+          console.error('Error reading current version:', err);
+          currentVersion = app.getVersion();
+          console.log('Current version from app.getVersion():', currentVersion);
+        }
+        
+        console.log('Version comparison:', { current: currentVersion, latest: latestVersion, isDifferent: latestVersion !== currentVersion });
+        
+        if (latestVersion !== currentVersion) {
+          console.log('Update available! Sending update-status: available');
+          // Send update available status
+          if (mainWindow) {
+            mainWindow.webContents.send('update-status', 'available', {
+              version: latestVersion,
+              releaseDate: release.published_at,
+              releaseNotes: release.body
+            });
+          } else {
+            console.log('MainWindow not available for sending update status');
+          }
+        } else {
+          console.log('No update available. Sending update-status: not-available');
+          // Send no update available status
+          if (mainWindow) {
+            mainWindow.webContents.send('update-status', 'not-available');
+          } else {
+            console.log('MainWindow not available for sending update status');
+          }
+        }
+      } catch (error) {
+        console.error('Error in background update check:', error);
+        // Don't send error status to avoid showing errors to users
+      }
+    }, 2000); // Wait 2 seconds after app loads to avoid blocking startup
   });
 }
 
